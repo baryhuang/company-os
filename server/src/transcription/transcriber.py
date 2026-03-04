@@ -126,7 +126,7 @@ def transcribe_video(video_path: str, language_code: Optional[str] = None, force
         is_chinese = detected_language.startswith('zh') if detected_language else False
 
         logger.info("Processing speaker diarization results...")
-        for utterance in transcript.utterances:
+        for utterance in (transcript.utterances or []):
             text = zhconv.convert(utterance.text, 'zh-hant') if is_chinese else utterance.text
             segment = TranscriptionSegment(
                 text=text,
