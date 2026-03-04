@@ -165,7 +165,9 @@ async def _analyze_with_file_agent(question: str, bot_name: str, user_id: int = 
 
     # Build system prompt — tell agent to read chat history file directly
     history_file = bot_data_dir / _HISTORY_FILENAME
+    utc_now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     system_prompt = (
+        f"Current time: {utc_now}\n\n"
         "You are a file analysis assistant. The user is asking about their stored files "
         "(meeting transcripts, voice memo transcriptions, uploaded documents). "
         "Browse the current directory to discover files, read the relevant ones, "
@@ -264,6 +266,18 @@ _CHAT_TOOLS = [
                     }
                 },
                 "required": ["question"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_time",
+            "description": "Get the current time in UTC. Call this when the user asks what time it is.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
             }
         }
     }
@@ -420,8 +434,10 @@ async def _chat(user_id: int, message: str, bot_name: str, s3_client=None, s3_bu
     _save_chat_histories(bot_name, s3_client=s3_client, s3_bucket=s3_bucket)
 
     try:
+        utc_now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
         messages = [
             {"role": "system", "content": (
+                f"Current time: {utc_now}\n\n"
                 "You are a helpful assistant integrated into a Telegram bot. "
                 "You help with meeting notes, transcription questions, and general tasks. "
                 "Be concise and conversational. Use markdown formatting when helpful. "
@@ -447,14 +463,32 @@ async def _chat(user_id: int, message: str, bot_name: str, s3_client=None, s3_bu
             history.append({"role": "assistant", "content": reply})
             return reply
 
-        # Tool call detected — delegate to GLM Claude file agent
+        # Tool call detected
         tool_call = choice.message.tool_calls[0]
+        tool_name = tool_call.function.name
         args = json.loads(tool_call.function.arguments)
-        question = args.get("question", message)
 
+        if tool_name == "get_current_time":
+            utc_time = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+            logger.info(f"Tool call: get_current_time → {utc_time}")
+            # Feed tool result back to get a natural language response
+            messages.append(choice.message.model_dump())
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": utc_time,
+            })
+            follow_up = client.chat.completions.create(
+                model=model, messages=messages, max_tokens=1024,
+            )
+            reply = follow_up.choices[0].message.content
+            history.append({"role": "assistant", "content": reply})
+            return reply
+
+        # search_stored_files — delegate to GLM Claude file agent
+        question = args.get("question", message)
         logger.info(f"Intent: file analysis → delegating to GLM Claude agent (question={question!r})")
 
-        # Spawn GLM Claude agent with file tools
         if progress_callback:
             await progress_callback("🔍 Searching your files...")
         analysis = await _analyze_with_file_agent(question, bot_name, user_id=user_id, s3_client=s3_client, s3_bucket=s3_bucket, progress_callback=progress_callback)
