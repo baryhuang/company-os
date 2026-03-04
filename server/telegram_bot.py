@@ -49,9 +49,39 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 # Short transcripts are sent inline, long ones get summary + file
 INLINE_CHAR_LIMIT = 2000
 
-# Per-user conversation history (in-memory, resets on restart)
+# Per-user conversation history (persisted to disk + S3)
 _chat_histories: dict[int, list[dict]] = {}
 MAX_HISTORY = 20
+_HISTORY_FILENAME = "chat_history.json"
+
+
+def _load_chat_histories(bot_name: str):
+    """Load chat histories from disk (synced from S3 on startup)."""
+    global _chat_histories
+    history_path = DATA_DIR / bot_name / _HISTORY_FILENAME
+    if history_path.exists():
+        try:
+            data = json.loads(history_path.read_text())
+            # JSON keys are strings, convert back to int user IDs
+            _chat_histories = {int(k): v for k, v in data.items()}
+            logger.info(f"Loaded chat histories for {len(_chat_histories)} users")
+        except Exception as e:
+            logger.error(f"Failed to load chat histories: {e}")
+            _chat_histories = {}
+
+
+def _save_chat_histories(bot_name: str, s3_client=None, s3_bucket: str | None = None):
+    """Save chat histories to disk and optionally S3."""
+    history_path = DATA_DIR / bot_name / _HISTORY_FILENAME
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        history_path.write_text(json.dumps(_chat_histories, ensure_ascii=False, indent=None))
+        # Also sync to S3
+        if s3_client and s3_bucket:
+            key = f"{bot_name}/{_HISTORY_FILENAME}"
+            s3_client.upload_file(str(history_path), s3_bucket, key)
+    except Exception as e:
+        logger.error(f"Failed to save chat histories: {e}")
 
 
 def _get_openai_client():
@@ -89,7 +119,7 @@ def _ensure_claude_config():
     claude_dir.mkdir(exist_ok=True)
 
 
-async def _analyze_with_file_agent(question: str, bot_name: str, s3_client=None, s3_bucket: str | None = None) -> str | None:
+async def _analyze_with_file_agent(question: str, bot_name: str, user_id: int = 0, s3_client=None, s3_bucket: str | None = None, progress_callback=None) -> str | None:
     """Run Claude Agent SDK pointed at GLM to autonomously analyze stored files.
 
     The agent gets Read, Glob, Grep tools and is pointed at the data/ directory.
@@ -133,21 +163,31 @@ async def _analyze_with_file_agent(question: str, bot_name: str, s3_client=None,
     logger.info(f"Agent env: BASE_URL={agent_env['ANTHROPIC_BASE_URL']}, "
                 f"MODEL={glm_model}, apiKeySource={'ANTHROPIC_API_KEY+AUTH_TOKEN'}")
 
+    # Build system prompt — tell agent to read chat history file directly
+    history_file = bot_data_dir / _HISTORY_FILENAME
+    system_prompt = (
+        "You are a file analysis assistant. The user is asking about their stored files "
+        "(meeting transcripts, voice memo transcriptions, uploaded documents). "
+        "Browse the current directory to discover files, read the relevant ones, "
+        "and answer the user's question. Be concise and helpful. Use markdown formatting.\n\n"
+        f"You must read the file '{history_file.resolve()}' to understand the conversation history "
+        "before answering. This JSON file contains the chat history between you and the user, "
+        "with each entry having 'role' (user/assistant) and 'content' fields. "
+        "Use this context to understand what the user has previously asked about."
+    )
+
     options = ClaudeAgentOptions(
-        system_prompt=(
-            "You are a file analysis assistant. The user is asking about their stored files "
-            "(meeting transcripts, voice memo transcriptions, uploaded documents). "
-            "Browse the current directory to discover files, read the relevant ones, "
-            "and answer the user's question. Be concise and helpful. Use markdown formatting."
-        ),
+        system_prompt=system_prompt,
         allowed_tools=["Read", "Glob", "Grep"],
         cwd=data_path,
-        max_turns=10,
+        max_turns=20,
         env=agent_env,
     )
 
     try:
         result_parts = []
+        final_answer = None
+        turn_count = 0
         async for message in query(prompt=question, options=options):
             if isinstance(message, AssistantMessage):
                 for block in message.content:
@@ -155,7 +195,21 @@ async def _analyze_with_file_agent(question: str, bot_name: str, s3_client=None,
                         logger.info(f"Agent text: {block.text[:200]}")
                         result_parts.append(block.text)
                     elif isinstance(block, ToolUseBlock):
+                        turn_count += 1
                         logger.info(f"Agent tool call: {block.name}({getattr(block, 'input', '')})")
+                        if progress_callback:
+                            tool_name = block.name
+                            tool_input = getattr(block, 'input', {})
+                            if tool_name == "Grep":
+                                detail = f"Searching for: {tool_input.get('pattern', '')}"
+                            elif tool_name == "Read":
+                                path = tool_input.get('file_path', '')
+                                detail = f"Reading: {Path(path).name}"
+                            elif tool_name == "Glob":
+                                detail = f"Finding files: {tool_input.get('pattern', '')}"
+                            else:
+                                detail = f"Using {tool_name}"
+                            await progress_callback(f"🔍 Analyzing files... ({turn_count}) {detail}")
                     elif isinstance(block, ToolResultBlock):
                         content = str(getattr(block, 'content', ''))[:200]
                         logger.info(f"Agent tool result: {content}")
@@ -163,10 +217,15 @@ async def _analyze_with_file_agent(question: str, bot_name: str, s3_client=None,
                 logger.info(f"Agent system: {message}")
             elif isinstance(message, ResultMessage):
                 logger.info(f"Agent result: {message}")
+                # Prefer ResultMessage.result — it contains the complete final answer
+                r = getattr(message, 'result', None)
+                if r:
+                    final_answer = r
             else:
                 logger.info(f"Agent message ({type(message).__name__}): {str(message)[:200]}")
 
-        return "\n".join(result_parts) if result_parts else None
+        # Prefer the final answer from ResultMessage; fall back to collected text parts
+        return final_answer or ("\n".join(result_parts) if result_parts else None)
 
     except ProcessError as e:
         logger.error(f"Claude Agent SDK process failed (exit code {e.exit_code}): {e}")
@@ -180,12 +239,7 @@ async def _analyze_with_file_agent(question: str, bot_name: str, s3_client=None,
         return None
 
     finally:
-        # Persist Claude Agent session history to S3
-        if s3_client and s3_bucket:
-            try:
-                _sync_claude_history_to_s3(s3_client, s3_bucket)
-            except Exception as e:
-                logger.error(f"Failed to sync Claude history to S3: {e}")
+        pass  # No S3 sync needed — agent sessions are stateless
 
 
 # Tool definition for OpenAI function calling (intent detection)
@@ -271,10 +325,8 @@ def _sync_from_s3(s3_client, bucket: str, bot_name: str):
     count = _sync_s3_prefix_to_local(s3_client, bucket, f"{bot_name}/", DATA_DIR / bot_name)
     logger.info(f"Bot data sync: {count} files downloaded")
 
-    # Sync Claude Agent SDK session history
-    logger.info(f"Syncing Claude Agent history from s3://{bucket}/.claude/ ...")
-    count = _sync_s3_prefix_to_local(s3_client, bucket, ".claude/", CLAUDE_DIR)
-    logger.info(f"Claude Agent history sync: {count} files downloaded")
+    # Note: Claude Agent SDK sessions are stateless (each question spawns a fresh agent),
+    # so we don't sync ~/.claude/ to/from S3. Only bot data (transcripts, files) is synced.
 
 
 def _sync_claude_history_to_s3(s3_client, bucket: str):
@@ -343,7 +395,7 @@ def _summarize(transcript_text: str) -> str | None:
         return None
 
 
-async def _chat(user_id: int, message: str, bot_name: str, s3_client=None, s3_bucket: str | None = None) -> str | None:
+async def _chat(user_id: int, message: str, bot_name: str, s3_client=None, s3_bucket: str | None = None, progress_callback=None) -> str | None:
     """Chat with AI. Uses OpenAI tool calling to detect file analysis intent.
 
     Normal chat → OpenAI-compatible endpoint responds directly.
@@ -363,6 +415,9 @@ async def _chat(user_id: int, message: str, bot_name: str, s3_client=None, s3_bu
 
     if len(history) > MAX_HISTORY:
         history[:] = history[-MAX_HISTORY:]
+
+    # Save immediately so the Claude agent can read the latest history from disk
+    _save_chat_histories(bot_name, s3_client=s3_client, s3_bucket=s3_bucket)
 
     try:
         messages = [
@@ -400,7 +455,9 @@ async def _chat(user_id: int, message: str, bot_name: str, s3_client=None, s3_bu
         logger.info(f"Intent: file analysis → delegating to GLM Claude agent (question={question!r})")
 
         # Spawn GLM Claude agent with file tools
-        analysis = await _analyze_with_file_agent(question, bot_name, s3_client=s3_client, s3_bucket=s3_bucket)
+        if progress_callback:
+            await progress_callback("🔍 Searching your files...")
+        analysis = await _analyze_with_file_agent(question, bot_name, user_id=user_id, s3_client=s3_client, s3_bucket=s3_bucket, progress_callback=progress_callback)
 
         if analysis:
             reply = analysis
@@ -457,6 +514,9 @@ def main():
         _sync_from_s3(s3_client, s3_bucket, bot_name)
     else:
         logger.info("S3 storage disabled (no S3_BUCKET). Saving files locally only.")
+
+    # Restore conversation histories from disk (synced from S3 above)
+    _load_chat_histories(bot_name)
 
     # Populate shared state for the dashboard API
     bot_state.started_at = datetime.datetime.now()
@@ -650,13 +710,40 @@ def main():
             )
             return
 
-        reply = await _chat(user.id, text, bot_name, s3_client=s3_client, s3_bucket=s3_bucket)
+        # Send a thinking message that we'll update with progress
+        thinking_msg = await msg.reply_text("Thinking...")
+
+        async def progress_callback(status_text: str):
+            try:
+                await thinking_msg.edit_text(status_text)
+            except Exception:
+                pass  # Ignore edit errors (e.g. message unchanged)
+
+        reply = await _chat(user.id, text, bot_name, s3_client=s3_client, s3_bucket=s3_bucket, progress_callback=progress_callback)
         bot_state.chat_count += 1
         bot_state.record_activity()
+        # Persist conversation history to disk + S3
+        _save_chat_histories(bot_name, s3_client=s3_client, s3_bucket=s3_bucket)
         if reply:
-            await msg.reply_text(reply, parse_mode="Markdown")
+            # Telegram has a 4096 char limit per message
+            if len(reply) > 4000:
+                reply = reply[:4000] + "\n\n_(truncated)_"
+            # Sanitize markdown for Telegram (doesn't support ## headers, tables, ---)
+            import re
+            tg_reply = re.sub(r'^#{1,6}\s+', '', reply, flags=re.MULTILINE)  # strip headers
+            tg_reply = re.sub(r'^\|.*\|$', lambda m: m.group(0).replace('|', ' '), tg_reply, flags=re.MULTILINE)  # strip table pipes
+            tg_reply = re.sub(r'^[-]{3,}$', '', tg_reply, flags=re.MULTILINE)  # strip horizontal rules
+            try:
+                await thinking_msg.edit_text(tg_reply, parse_mode="Markdown")
+            except Exception:
+                # If markdown parsing fails, send as plain text
+                try:
+                    await thinking_msg.edit_text(tg_reply)
+                except Exception as e:
+                    logger.error(f"Failed to send reply: {e}")
+                    await thinking_msg.edit_text("Sorry, the response was too complex to display. Please try a more specific question.")
         else:
-            await msg.reply_text("Sorry, I couldn't process that. Please try again.")
+            await thinking_msg.edit_text("Sorry, I couldn't process that. Please try again.")
 
     async def handle_document(update: Update, context):
         """Handle document uploads — route audio/video to transcription, store everything else."""
