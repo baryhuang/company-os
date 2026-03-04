@@ -1,14 +1,16 @@
 # ai-meeting-notes-agent
 
-> A system of record for everything your founding team says out loud.
+> I kept losing decisions my co-founder and I made in conversation. So I built this.
 
-Startup teams make their most important decisions in conversation — investor calls, customer discovery, co-founder debates, advisor sessions. Code goes in GitHub. Tasks go in Linear. But verbal decisions, customer insights, and midnight ideas? They live nowhere. They were said out loud and they're gone.
+My co-founder and I argued for 20 minutes about what we agreed on in a meeting. We were both there. We both remembered it differently. Nobody wrote it down.
 
-This bot is the bridge. Send a voice memo to Telegram, get a transcript back. Then ask questions across everything you've ever recorded: *"What did the investor say about our TAM?"* *"What did we agree on pricing last Tuesday?"* *"What did the customer say was their biggest blocker?"*
+This happens constantly at early-stage startups. Six meetings a day — investors, customers, advisors, co-founder syncs. The most important decisions are made out loud. Code goes in GitHub. Tasks go in Linear. But verbal decisions? Customer insights from discovery calls? That idea you voice-memo'd yourself at midnight? There's no system of record for any of it.
 
-Your recordings stop being a graveyard and start being your startup's searchable memory.
+**So I built one.** A Telegram bot — record a voice memo, send it, get a transcript back with speaker labels. Then ask it questions across every conversation you've ever recorded: *"What did we agree on pricing?"* *"What did the customer say about onboarding?"* *"What did the investor say about our TAM?"*
 
-## Open source. Self-hosted. Your conversations stay yours.
+I open-sourced it because I think builders should show their work, not just talk about AI. This is production code my team actually uses.
+
+## Self-hosted. Your conversations stay yours.
 
 Your most sensitive recordings — investor negotiations, co-founder disagreements, customer deal terms — should never live on someone else's server. Self-host with your own API keys. Free forever. MIT licensed.
 
@@ -16,13 +18,13 @@ Your most sensitive recordings — investor negotiations, co-founder disagreemen
 
 https://github.com/user-attachments/assets/d9013853-9d44-43d6-b1a4-dfdad1989480
 
-## The Problem
+## Why I Built This
 
-- **Founders talk faster than they write.** Six meetings a day. Decisions made verbally. Customer insights landing in conversation. Context switching kills memory.
-- **iPhone Voice Memos is the best recorder.** One tap from the lock screen. Nothing else comes close. But it's a dead end — recordings go in, nothing comes out.
-- **Recording apps solve the wrong problem.** Granola, Otter, Fireflies — they replace Voice Memos instead of building on it. And your recordings live on their servers.
-- **AI assistants don't know your context.** ChatGPT is powerful, but it can't search last Tuesday's customer call or find what your co-founder said about the pivot.
-- **What's missing is the bridge.** Transcription that feeds into an AI agent with memory of every conversation your team has had.
+- **I kept losing decisions.** My co-founder and I would agree on something in a call. A week later, neither of us remembered the details. Nobody wrote it down.
+- **Customer insights vanished.** We'd do 8 discovery calls in a week. By Friday, I couldn't remember which customer said what about onboarding vs. pricing.
+- **Voice memos were a dead end.** iPhone Voice Memos is the best recorder ever made — one tap from the lock screen. But I had hundreds of recordings I'd never listen to again.
+- **Recording apps solve the wrong problem.** Granola, Otter, Fireflies — they want you to download their app, and your recordings live on their servers. I'm a CTO. I don't buy SaaS tools when I can build them.
+- **What was missing was the bridge.** Transcription that feeds into an AI agent with memory of every conversation my team has had.
 
 ## What It Does
 
@@ -170,6 +172,10 @@ Voice notes from Telegram, iPhone Voice Memos, and any standard audio/video form
 - **Cross-conversation search** — "What have customers said about pricing?" across every recording
 - **Calendar integration** — auto-match recordings to meetings
 - **Personalized notes** — each participant gets notes relevant to them
+
+## Built By
+
+I'm a startup CTO building AI for healthcare at [PeakMojo](https://peakmojo.com). I solve real problems with AI and I build in the open. This is one of several internal tools I've open-sourced — if you're a founder who ships, star the repo or just steal the code. That's what open source is for.
 
 ## Technical Details
 
