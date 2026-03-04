@@ -1,31 +1,28 @@
 # ai-meeting-notes-agent
 
-> Voice transcription meets autonomous AI agent. Like [OpenClaw](https://openclaw.ai/) for your voice memos — transcribe, chat, and let an AI agent work with your files, all through Telegram.
+> A system of record for everything your founding team says out loud.
 
-## Free and open source.
+Startup teams make their most important decisions in conversation — investor calls, customer discovery, co-founder debates, advisor sessions. Code goes in GitHub. Tasks go in Linear. But verbal decisions, customer insights, and midnight ideas? They live nowhere. They were said out loud and they're gone.
 
-Self-host with your own API keys. Free forever. MIT licensed.
-<img width="1327" height="672" alt="Screenshot 2026-02-19 at 12 16 31 PM" src="https://github.com/user-attachments/assets/f7da764c-5df2-4a10-b6d9-7bf2d09c4d9c" />
+This bot is the bridge. Send a voice memo to Telegram, get a transcript back. Then ask questions across everything you've ever recorded: *"What did the investor say about our TAM?"* *"What did we agree on pricing last Tuesday?"* *"What did the customer say was their biggest blocker?"*
+
+Your recordings stop being a graveyard and start being your startup's searchable memory.
+
+## Open source. Self-hosted. Your conversations stay yours.
+
+Your most sensitive recordings — investor negotiations, co-founder disagreements, customer deal terms — should never live on someone else's server. Self-host with your own API keys. Free forever. MIT licensed.
+
+<img width="1327" height="672" alt="Screenshot 2026-02-19 at 12 16 31 PM" src="https://github.com/user-attachments/assets/f7da764c-5df2-4a10-b6d9-7bf2d09c4d9c" />
 
 https://github.com/user-attachments/assets/d9013853-9d44-43d6-b1a4-dfdad1989480
 
-
-## Core Value
-
-**Transcription + AI agent in one bot.** Two things that belong together but nobody combines:
-
-1. **Transcription** — send a voice memo, get a transcript with speaker labels and timestamps. Any language, any length. That's the entry point.
-2. **Autonomous AI agent** — the same bot holds a conversation, summarizes long recordings, and spawns a Claude Code Agent that reads your stored files to answer questions. Like OpenClaw, but specialized for voice-first workflows.
-
-Your Telegram chat becomes a personal AI workspace where voice memos, transcripts, files, and conversations all live together.
-
 ## The Problem
 
-- **iPhone Voice Memos is the best recorder.** One tap from the lock screen. No app to open, no meeting to join. It never crashes. Nothing else comes close.
-- **But voice memos are a dead end.** You have hundreds on your phone. You'll never listen to them again.
-- **Recording apps solve the wrong problem.** Granola, Otter, Fireflies — they replace Voice Memos instead of building on it.
-- **AI assistants don't know your context.** ChatGPT, OpenClaw — powerful, but they can't search last Tuesday's meeting or find what your manager said about the deadline.
-- **What's missing is the bridge.** Transcription that feeds into an AI agent with memory of everything you've recorded and stored.
+- **Founders talk faster than they write.** Six meetings a day. Decisions made verbally. Customer insights landing in conversation. Context switching kills memory.
+- **iPhone Voice Memos is the best recorder.** One tap from the lock screen. Nothing else comes close. But it's a dead end — recordings go in, nothing comes out.
+- **Recording apps solve the wrong problem.** Granola, Otter, Fireflies — they replace Voice Memos instead of building on it. And your recordings live on their servers.
+- **AI assistants don't know your context.** ChatGPT is powerful, but it can't search last Tuesday's customer call or find what your co-founder said about the pivot.
+- **What's missing is the bridge.** Transcription that feeds into an AI agent with memory of every conversation your team has had.
 
 ## What It Does
 
@@ -35,40 +32,19 @@ Send anything to the Telegram bot. It figures out what to do.
 |----------|----------|
 | Voice memo or audio/video file | Transcribes with speaker labels + timestamps. Long recordings get an AI summary. |
 | Text message | AI chat — ask questions, get help, have a conversation. |
-| Text about your files — *"what did we discuss yesterday?"* | Searches your stored transcripts and files, answers with context. |
-| Any other file (PDF, image, doc...) | Stores it for you. Ask about it later. |
+| *"What did we discuss yesterday?"* | Searches your stored transcripts and files, answers with context. |
+| Any other file (PDF, image, doc...) | Stores it for the AI agent. Ask about it later. |
 
-All files — audio, transcripts, uploads — are stored locally and optionally synced to S3. Survives container restarts.
+All files — audio, transcripts, uploads — stored locally and optionally synced to S3. Survives container restarts.
 
 ## How It Works
 
-1. **Record** with Apple Voice Memos (or any voice recorder on your phone)
-2. **Share** the recording directly to Telegram — no opening another app, no exporting, no emailing yourself
-3. **Read** the full transcript — with speaker labels and timestamps — right in the chat
+1. **Record** with Apple Voice Memos (or any recorder on your phone)
+2. **Share** the recording to Telegram — no new app, no exporting, no emailing yourself
+3. **Read** the full transcript with speaker labels and timestamps, right in the chat
+4. **Ask** questions across everything you've ever recorded
 
 Works with any language. Handles multiple speakers. Transcripts come back in under a minute.
-
-## Prerequisites
-
-You need two API keys to get started. Both are free:
-
-| Key | What it's for | Where to get it | Cost |
-|-----|--------------|-----------------|------|
-| `TELEGRAM_BOT_TOKEN` | Receive and reply to messages | Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot` | Free |
-| `ASSEMBLY_API_KEY` | Transcription with speaker labels | [assemblyai.com/app/account](https://www.assemblyai.com/app/account) | Free tier included |
-
-### Optional keys (unlock more features)
-
-| Key | What it unlocks |
-|-----|----------------|
-| `OPENAI_API_KEY` | AI chat + summarization. Works with any OpenAI-compatible API (OpenAI, OpenRouter, DigitalOcean, etc.) |
-| `OPENAI_BASE_URL` | Custom endpoint (default: `https://api.openai.com/v1`) |
-| `OPENAI_MODEL` | Model for chat + summarization (default: `gpt-4o-mini`) |
-| `GLM_API_KEY` | File analysis via [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python). Ask questions about your stored files. |
-| `GLM_MODEL` | Model for file analysis (default: `glm-4-plus`) |
-| `ANTHROPIC_BASE_URL` | Anthropic-compatible endpoint (default: `https://api.z.ai/api/anthropic`). Works with Z.AI, Anthropic, or any compatible provider. |
-| `S3_BUCKET` | S3 storage sync — all files mirrored to S3, restored on container restart |
-| `BOT_NAME` | Storage prefix (default: `transcribe-bot`) |
 
 ## Getting Started
 
@@ -99,6 +75,28 @@ uv run telegram_bot.py
 ```
 
 That's it. Send a voice memo to your bot on Telegram and get a transcript back.
+
+### Prerequisites
+
+You need two API keys to get started. Both are free:
+
+| Key | What it's for | Where to get it | Cost |
+|-----|--------------|-----------------|------|
+| `TELEGRAM_BOT_TOKEN` | Receive and reply to messages | Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot` | Free |
+| `ASSEMBLY_API_KEY` | Transcription with speaker labels | [assemblyai.com/app/account](https://www.assemblyai.com/app/account) | Free tier included |
+
+### Optional keys (unlock more features)
+
+| Key | What it unlocks |
+|-----|----------------|
+| `OPENAI_API_KEY` | AI chat + summarization. Works with any OpenAI-compatible API (OpenAI, OpenRouter, DigitalOcean, etc.) |
+| `OPENAI_BASE_URL` | Custom endpoint (default: `https://api.openai.com/v1`) |
+| `OPENAI_MODEL` | Model for chat + summarization (default: `gpt-4o-mini`) |
+| `GLM_API_KEY` | File analysis via [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python). Ask questions about your stored files. |
+| `GLM_MODEL` | Model for file analysis (default: `glm-4-plus`) |
+| `ANTHROPIC_BASE_URL` | Anthropic-compatible endpoint (default: `https://api.z.ai/api/anthropic`). Works with Z.AI, Anthropic, or any compatible provider. |
+| `S3_BUCKET` | S3 storage sync — all files mirrored to S3, restored on container restart |
+| `BOT_NAME` | Storage prefix (default: `transcribe-bot`) |
 
 ## Deploy
 
@@ -158,21 +156,20 @@ Voice notes from Telegram, iPhone Voice Memos, and any standard audio/video form
 
 ## Architecture
 
-Like OpenClaw, the bot uses a messaging platform (Telegram) as the primary interface, with modular AI capabilities behind it:
-
-- **Telegram bot** (`telegram_bot.py`) — message router: voice → transcription, text → conversation, files → storage
+- **Telegram bot** (`telegram_bot.py`) — message router: voice to transcription, text to conversation, files to storage
 - **Transcription** — AssemblyAI with speaker diarization, auto language detection, multi-format support
 - **Conversation** — OpenAI-compatible LLM for chat, summarization, and Q&A
 - **Claude Code Agent** — autonomous agent (via Claude Agent SDK) that reads your stored files and answers questions with full context
 - **Storage** — unified `data/{bot_name}/YYYY/MM/DD/` structure, identical paths locally and on S3
 - **S3 sync** — bidirectional: pulls from S3 on startup, pushes after every write
-- **Web dashboard** — React pipeline visualization showing module status, deployment info, and live configuration
+- **Web dashboard** — React dashboard showing module status, deployment info, and live configuration
 
 ## What's Next
 
-- **Personalized notes** — each participant gets notes relevant to them
+- **Team workspaces** — shared memory across your founding team
+- **Cross-conversation search** — "What have customers said about pricing?" across every recording
 - **Calendar integration** — auto-match recordings to meetings
-- **Team workspaces** — shared transcripts across a group
+- **Personalized notes** — each participant gets notes relevant to them
 
 ## Technical Details
 
