@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from '@insforge/react';
 import { useAtlasData } from './hooks/useAtlasData';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -7,8 +8,10 @@ import { CompetitorView } from './components/CompetitorView';
 import { ExecutiveReport } from './components/ExecutiveReport';
 import type { ViewType } from './types';
 
-export default function App() {
-  const { dimensions, dimensionsData, competitorData, loading, error } = useAtlasData();
+function AuthenticatedApp() {
+  const { user } = useUser();
+  const userId = user!.id;
+  const { dimensions, dimensionsData, competitorData, loading, error } = useAtlasData(userId);
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [currentDimIndex, setCurrentDimIndex] = useState(0);
   const [expandLevel, setExpandLevel] = useState(-1);
@@ -22,7 +25,6 @@ export default function App() {
 
   const handleExpandLevel = useCallback((level: number) => {
     if (level === 0) {
-      // Fit request
       setFitRequest(prev => !prev);
     } else {
       setExpandLevel(level);
@@ -48,6 +50,9 @@ export default function App() {
       <button className="mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
         {'\u2630'}
       </button>
+      <div className="user-button-wrapper">
+        <UserButton />
+      </div>
       <div className="app">
         <Sidebar
           dimensions={dimensions}
@@ -95,6 +100,23 @@ export default function App() {
           )}
         </div>
       </div>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <>
+      <SignedOut>
+        <div className="login-screen">
+          <h1>Decision Atlas</h1>
+          <p>Sign in to access your atlas data</p>
+          <SignInButton />
+        </div>
+      </SignedOut>
+      <SignedIn>
+        <AuthenticatedApp />
+      </SignedIn>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchDimensions, fetchDimensionData, fetchCompetitorData } from '../api';
+import { fetchDimensions, fetchDimensionData, fetchCompetitorData, initializeUserData } from '../api';
 import type { DimensionMeta, TreeNode, CompetitorData } from '../types';
 
 interface AtlasData {
@@ -10,7 +10,7 @@ interface AtlasData {
   error: string | null;
 }
 
-export function useAtlasData(): AtlasData {
+export function useAtlasData(userId: string): AtlasData {
   const [dimensions, setDimensions] = useState<DimensionMeta[]>([]);
   const [dimensionsData, setDimensionsData] = useState<Record<string, TreeNode>>({});
   const [competitorData, setCompetitorData] = useState<CompetitorData | null>(null);
@@ -20,35 +20,46 @@ export function useAtlasData(): AtlasData {
   useEffect(() => {
     let cancelled = false;
 
+    async function loadData() {
+      const dims = await fetchDimensions(userId);
+      if (cancelled) return;
+      setDimensions(dims);
+
+      const results = await Promise.all([
+        ...dims.map(async (d) => {
+          const data = await fetchDimensionData(userId, d.id);
+          return { id: d.id, data };
+        }),
+        fetchCompetitorData(userId).then(data => ({ id: '__comp__', data })),
+      ]);
+
+      if (cancelled) return;
+
+      const dataMap: Record<string, TreeNode> = {};
+      for (const r of results) {
+        if (r.id === '__comp__') {
+          setCompetitorData(r.data as CompetitorData);
+        } else {
+          dataMap[r.id] = r.data as TreeNode;
+        }
+      }
+      setDimensionsData(dataMap);
+    }
+
     async function load() {
       try {
-        const dims = await fetchDimensions();
+        await loadData();
+      } catch {
+        // First load failed — initialize user data from defaults and retry
         if (cancelled) return;
-        setDimensions(dims);
-
-        // Fetch all dimension data + competitor data in parallel
-        const results = await Promise.all([
-          ...dims.map(async (d) => {
-            const data = await fetchDimensionData(d.id);
-            return { id: d.id, data };
-          }),
-          fetchCompetitorData().then(data => ({ id: '__comp__', data })),
-        ]);
-
-        if (cancelled) return;
-
-        const dataMap: Record<string, TreeNode> = {};
-        for (const r of results) {
-          if (r.id === '__comp__') {
-            setCompetitorData(r.data as CompetitorData);
-          } else {
-            dataMap[r.id] = r.data as TreeNode;
+        try {
+          await initializeUserData(userId);
+          if (cancelled) return;
+          await loadData();
+        } catch (retryErr) {
+          if (!cancelled) {
+            setError(retryErr instanceof Error ? retryErr.message : String(retryErr));
           }
-        }
-        setDimensionsData(dataMap);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -57,7 +68,7 @@ export function useAtlasData(): AtlasData {
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [userId]);
 
   return { dimensions, dimensionsData, competitorData, loading, error };
 }
