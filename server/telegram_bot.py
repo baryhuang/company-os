@@ -848,7 +848,14 @@ def main():
         return "\n".join(lines).strip()
 
     # Build Telegram app — order matters: more specific filters first
-    builder = Application.builder().token(token)
+    builder = (
+        Application.builder()
+        .token(token)
+        .read_timeout(60)
+        .write_timeout(60)
+        .connect_timeout(30)
+        .get_updates_read_timeout(10)
+    )
     telegram_api_server = os.getenv("TELEGRAM_API_SERVER")
     if telegram_api_server:
         builder = (
