@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Markmap, deriveOptions } from 'markmap-view';
 import type { DimensionMeta, TreeNode, CompetitorData } from '../types';
 
@@ -15,6 +15,7 @@ const statusIcons: Record<string, string> = {
 interface INode {
   content: string;
   children: INode[];
+  payload?: Record<string, unknown>;
 }
 
 export function jsonToINode(node: TreeNode, depth = 0): INode {
@@ -35,12 +36,17 @@ export function jsonToINode(node: TreeNode, depth = 0): INode {
     content += ` <span style="font-size:0.8em;color:#918a80">${node.desc}</span>`;
   }
 
+  const dateOrd = parseDateOrdinal(node.date || '');
   const children = (node.children || []).map(c => jsonToINode(c, depth + 1));
-  return { content, children };
+  return { content, children, payload: dateOrd !== null ? { dateOrd } : undefined };
 }
 
 function cloneINode(node: INode): INode {
-  return { content: node.content, children: (node.children || []).map(cloneINode) };
+  return {
+    content: node.content,
+    children: (node.children || []).map(cloneINode),
+    payload: node.payload ? { ...node.payload } : undefined,
+  };
 }
 
 const MARKMAP_COLORS = ['#3a7d44', '#2a8a7a', '#c07820', '#6b5aa0', '#3a6da0', '#c94040', '#8a6d3b', '#5a7d8a', '#7a5a8a'];
@@ -85,21 +91,45 @@ function ordinalToLabel(ord: number): string {
   return `${monthNames[month]} ${day}`;
 }
 
-function filterTreeByDate(node: TreeNode, cutoff: number): TreeNode | null {
-  const ord = parseDateOrdinal(node.date || '');
-  if (ord !== null && ord > cutoff) return null;
+/**
+ * Walk the markmap internal data tree and set fold state based on date cutoff.
+ * Nodes with dateOrd > cutoff get folded (fold=1) so they collapse into parent.
+ * Nodes with dateOrd <= cutoff get unfolded (fold=0).
+ * Returns true if any fold state changed.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyDateFold(node: any, cutoff: number): boolean {
+  let changed = false;
+  if (!node) return changed;
 
-  const filteredChildren: TreeNode[] = [];
-  for (const child of node.children || []) {
-    const fc = filterTreeByDate(child, cutoff);
-    if (fc) filteredChildren.push(fc);
+  const dateOrd = node.payload?.dateOrd as number | undefined;
+
+  if (dateOrd !== undefined && dateOrd > cutoff) {
+    // This node's date is after cutoff — fold it (hide children)
+    // We fold the PARENT perspective: this node should be hidden.
+    // Since markmap fold hides children (not self), we fold this node's children
+    // AND mark this node itself for its parent to fold.
+    if (!node.payload?.fold || node.payload.fold !== 1) {
+      node.payload = { ...node.payload, fold: 1 };
+      changed = true;
+    }
+  } else {
+    // This node is visible — unfold it
+    if (node.payload?.fold) {
+      node.payload = { ...node.payload, fold: 0 };
+      changed = true;
+    }
   }
 
-  if (ord === null && filteredChildren.length === 0 && (node.children || []).length > 0) {
-    return null;
+  // Recurse into children
+  const children = node.children as unknown[];
+  if (children) {
+    for (const child of children) {
+      if (applyDateFold(child, cutoff)) changed = true;
+    }
   }
 
-  return { ...node, children: filteredChildren };
+  return changed;
 }
 
 /* ── Shared Timeline Bar ───────────────────────── */
@@ -205,50 +235,6 @@ function buildOverviewRoot(
   };
 }
 
-/** Build overview root with date filtering applied to each dimension tree */
-function buildFilteredOverviewRoot(
-  dimensionsMeta: DimensionMeta[],
-  dataMap: Record<string, TreeNode>,
-  compData: CompetitorData | null,
-  cutoff: number,
-): INode {
-  const dimChildren: INode[] = [];
-
-  for (const dim of dimensionsMeta) {
-    const treeData = dataMap[dim.id];
-    if (!treeData) {
-      dimChildren.push({ content: `${dim.icon} ${dim.title}`, children: [] });
-      continue;
-    }
-    const filtered = filterTreeByDate(treeData, cutoff);
-    if (!filtered) continue; // entire dimension hidden at this date
-    const children = (filtered.children || []).map(c => jsonToINode(c, 2));
-    dimChildren.push({
-      content: `${dim.icon} <strong>${dim.title}</strong> <span style="font-size:0.8em;color:#8a9e8c">\u2014 ${dim.desc}</span>`,
-      children,
-    });
-  }
-
-  if (compData?.stages) {
-    const compChildren = compData.stages.map(stage => ({
-      content: `<strong>${stage.name}</strong> <span style="font-size:0.8em;color:#8a9e8c">${stage.date} \u00b7 ${stage.total}\u5BB6</span>`,
-      children: [
-        { content: `<span style="color:#3a6da0">Position:</span> ${stage.our_position}`, children: [] },
-        { content: `<span style="color:#3a7d44">White space:</span> ${stage.white_space}`, children: [] },
-      ],
-    }));
-    dimChildren.push({
-      content: `\u2694\uFE0F <strong>Competitor Evolution</strong> <span style="font-size:0.8em;color:#8a9e8c">\u2014 10 to 80+</span>`,
-      children: compChildren,
-    });
-  }
-
-  return {
-    content: '\u2764\uFE0F <strong>CareMojo \u00b7 Decision Atlas</strong>',
-    children: dimChildren,
-  };
-}
-
 interface MarkmapViewProps {
   dimensions: DimensionMeta[];
   dimensionsData: Record<string, TreeNode>;
@@ -261,7 +247,6 @@ export function MarkmapView({ dimensions, dimensionsData, competitorData, expand
   const svgRef = useRef<SVGSVGElement>(null);
   const mmRef = useRef<Markmap | null>(null);
 
-  // Collect all dates across all dimensions
   const allDates = useMemo(() => {
     const trees = Object.values(dimensionsData);
     return trees.length > 0 ? collectDatesFromMultiple(trees) : [];
@@ -274,21 +259,18 @@ export function MarkmapView({ dimensions, dimensionsData, competitorData, expand
   }, [allDates]);
 
   const currentCutoff = allDates[dateIndex] ?? Infinity;
-  const isShowingAll = dateIndex >= allDates.length - 1;
 
-  // Build the INode root, filtered by date
-  const rootNode = useMemo(() => {
+  // Build full INode tree (all dates, no filtering)
+  const fullRoot = useMemo(() => {
     if (dimensions.length === 0 || Object.keys(dimensionsData).length === 0) return null;
-    if (isShowingAll) {
-      return buildOverviewRoot(dimensions, dimensionsData, competitorData);
-    }
-    return buildFilteredOverviewRoot(dimensions, dimensionsData, competitorData, currentCutoff);
-  }, [dimensions, dimensionsData, competitorData, currentCutoff, isShowingAll]);
+    return buildOverviewRoot(dimensions, dimensionsData, competitorData);
+  }, [dimensions, dimensionsData, competitorData]);
 
-  const renderMarkmap = useCallback(() => {
-    if (!svgRef.current || !rootNode) return;
+  // Create markmap once with full tree
+  useEffect(() => {
+    if (!svgRef.current || !fullRoot) return;
     svgRef.current.innerHTML = '';
-    const freshRoot = cloneINode(rootNode);
+    const fresh = cloneINode(fullRoot);
     const derived = deriveOptions({
       color: MARKMAP_COLORS,
       spacingHorizontal: 80,
@@ -298,10 +280,24 @@ export function MarkmapView({ dimensions, dimensionsData, competitorData, expand
       duration: 500,
       initialExpandLevel: expandLevel === -1 ? -1 : expandLevel,
     });
-    mmRef.current = Markmap.create(svgRef.current, derived, freshRoot);
-  }, [rootNode, expandLevel]);
+    mmRef.current = Markmap.create(svgRef.current, derived, fresh);
 
-  useEffect(() => { renderMarkmap(); }, [renderMarkmap]);
+    return () => { mmRef.current = null; };
+  }, [fullRoot, expandLevel]);
+
+  // On date change: walk internal data tree, toggle fold, re-render
+  useEffect(() => {
+    const mm = mmRef.current;
+    if (!mm) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (mm as any).state?.data;
+    if (!data) return;
+
+    const changed = applyDateFold(data, currentCutoff);
+    if (changed) {
+      mm.renderData().then(() => mm.fit());
+    }
+  }, [currentCutoff]);
 
   useEffect(() => {
     if (onFitRequest && mmRef.current) mmRef.current.fit();
@@ -338,17 +334,14 @@ export function MarkmapDimensionView({ treeData, expandLevel, onFitRequest }: Ma
 
   const currentCutoff = allDates[dateIndex] ?? Infinity;
 
-  const filteredTree = useMemo(() => {
-    if (dateIndex >= allDates.length - 1) return treeData;
-    const filtered = filterTreeByDate(treeData, currentCutoff);
-    return filtered || treeData;
-  }, [treeData, currentCutoff, dateIndex, allDates.length]);
+  // Build full INode tree (all dates)
+  const fullRoot = useMemo(() => jsonToINode(treeData, 0), [treeData]);
 
-  const renderMarkmap = useCallback(() => {
+  // Create markmap once with full tree
+  useEffect(() => {
     if (!svgRef.current) return;
     svgRef.current.innerHTML = '';
-    const root = jsonToINode(filteredTree, 0);
-    const fresh = cloneINode(root);
+    const fresh = cloneINode(fullRoot);
     const derived = deriveOptions({
       color: MARKMAP_COLORS,
       spacingHorizontal: 80,
@@ -359,9 +352,23 @@ export function MarkmapDimensionView({ treeData, expandLevel, onFitRequest }: Ma
       initialExpandLevel: expandLevel === -1 ? -1 : expandLevel,
     });
     mmRef.current = Markmap.create(svgRef.current, derived, fresh);
-  }, [filteredTree, expandLevel]);
 
-  useEffect(() => { renderMarkmap(); }, [renderMarkmap]);
+    return () => { mmRef.current = null; };
+  }, [fullRoot, expandLevel]);
+
+  // On date change: walk internal data tree, toggle fold, re-render
+  useEffect(() => {
+    const mm = mmRef.current;
+    if (!mm) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (mm as any).state?.data;
+    if (!data) return;
+
+    const changed = applyDateFold(data, currentCutoff);
+    if (changed) {
+      mm.renderData().then(() => mm.fit());
+    }
+  }, [currentCutoff]);
 
   useEffect(() => {
     if (onFitRequest && mmRef.current) mmRef.current.fit();
