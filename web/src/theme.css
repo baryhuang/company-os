@@ -638,5 +638,38 @@ body::before {
   z-index: 100;
 }
 
+/* ── View tabs (build dimension) ─────────────── */
+.view-tabs {
+  display: flex; gap: 0;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.view-tabs .tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.view-tabs .tab-btn:hover { color: var(--green); }
+.view-tabs .tab-btn.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+
+/* ── Gantt chart container ───────────────────── */
+.gantt-wrap {
+  flex: 1; overflow: auto; padding: 24px;
+  background:
+    radial-gradient(ellipse at 30% 70%, rgba(45,122,62,0.03) 0%, transparent 50%),
+    linear-gradient(160deg, #f6f3ec 0%, #ede8df 30%, #f4f1eb 60%, #f0ece4 100%);
+}
+
 /* ── Selection ───────────────────────────────── */
 ::selection { background: var(--green-light); color: var(--green); }

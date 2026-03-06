@@ -6,6 +6,7 @@ import { TopBar } from './components/TopBar';
 import { MarkmapView, MarkmapDimensionView } from './components/MarkmapView';
 import { CompetitorView } from './components/CompetitorView';
 import { ExecutiveReport } from './components/ExecutiveReport';
+import { SwimGanttView } from './components/SwimGanttView';
 import type { ViewType } from './types';
 
 function AuthenticatedApp() {
@@ -17,6 +18,7 @@ function AuthenticatedApp() {
   const [expandLevel, setExpandLevel] = useState(-1);
   const [fitRequest, setFitRequest] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('tree');
 
   const handleSwitch = useCallback((view: ViewType, dimIndex?: number) => {
     setCurrentView(view);
@@ -84,11 +86,22 @@ function AuthenticatedApp() {
           )}
 
           {currentView === 'd3' && dimensions[currentDimIndex] && dimensionsData[dimensions[currentDimIndex].id] && (
-            <MarkmapDimensionView
-              treeData={dimensionsData[dimensions[currentDimIndex].id]}
-              expandLevel={expandLevel}
-              onFitRequest={fitRequest}
-            />
+            <>
+              {dimensions[currentDimIndex].id === 'build' && (
+                <div className="view-tabs">
+                  <button className={`tab-btn${buildTab === 'tree' ? ' active' : ''}`} onClick={() => setBuildTab('tree')}>Tree View</button>
+                  <button className={`tab-btn${buildTab === 'gantt' ? ' active' : ''}`} onClick={() => setBuildTab('gantt')}>Gantt Timeline</button>
+                </div>
+              )}
+              {buildTab === 'gantt' && dimensions[currentDimIndex].id === 'build'
+                ? <SwimGanttView treeData={dimensionsData[dimensions[currentDimIndex].id]} />
+                : <MarkmapDimensionView
+                    treeData={dimensionsData[dimensions[currentDimIndex].id]}
+                    expandLevel={expandLevel}
+                    onFitRequest={fitRequest}
+                  />
+              }
+            </>
           )}
 
           {currentView === 'competitor' && competitorData && (
