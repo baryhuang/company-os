@@ -1,4 +1,4 @@
-import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow, LinearTask } from './types';
+import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow, LinearTask, AIQueryResult } from './types';
 import { insforge } from './insforge';
 import { assembleTree } from './assembleTree';
 
@@ -234,6 +234,120 @@ export async function searchTasks(
 
   if (error) throw new Error(`Search failed: ${error.message}`);
   return data as LinearTask[];
+}
+
+// ── AI competitor query ───────────────────────────────────────────
+
+const DO_AI_URL = 'https://inference.do-ai.run/v1/chat/completions';
+const DO_AI_KEY = 'sk-do-kmxZD-ppFWcJmT8VINxRs83Osa6Kh-Il5ttBjM69adhUFDqzBGigWzY45Q';
+
+export async function queryCompetitorsAI(query: string, competitors: CompetitorRow[]): Promise<AIQueryResult> {
+  // Prepare slim competitor data for the AI context
+  const compactData = competitors.map(c => ({
+    name: c.name,
+    section: c.section,
+    subcategory: c.subcategory,
+    category: c.category,
+    threat: c.threat,
+    primary_focus: c.primary_focus,
+    target_customer: c.target_customer,
+    pricing_model: c.pricing_model,
+    price_range: c.price_range,
+    funding: c.funding,
+    uses_ai: c.uses_ai,
+    serves_cna: c.serves_cna,
+    serves_rn: c.serves_rn,
+    key_differentiator: c.key_differentiator,
+    relevance: c.relevance,
+    website: c.website,
+  }));
+
+  const resp = await fetch(DO_AI_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DO_AI_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'anthropic-claude-4.5-sonnet',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a competitive intelligence analyst. You have access to a competitor landscape database. Given a user query, analyze the competitors and return relevant results using the display_companies tool. Choose the most informative columns (max 5) based on the query. Always include the company name as the first column. Be concise in cell values.`,
+        },
+        {
+          role: 'user',
+          content: `Query: ${query}\n\nCompetitor database (${compactData.length} companies):\n${JSON.stringify(compactData, null, 0)}`,
+        },
+      ],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'display_companies',
+            description: 'Display a structured table of companies matching the query',
+            parameters: {
+              type: 'object',
+              properties: {
+                title: { type: 'string', description: 'Short title describing the results' },
+                columns: {
+                  type: 'array',
+                  description: 'Table columns (max 5). Each has header (display name) and key (data key).',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      header: { type: 'string' },
+                      key: { type: 'string' },
+                    },
+                    required: ['header', 'key'],
+                  },
+                  maxItems: 5,
+                },
+                rows: {
+                  type: 'array',
+                  description: 'Row data. Each row is an object with keys matching column keys.',
+                  items: {
+                    type: 'object',
+                    additionalProperties: { type: 'string' },
+                  },
+                },
+                summary: { type: 'string', description: 'Brief analytical summary of the findings' },
+              },
+              required: ['title', 'columns', 'rows'],
+            },
+          },
+        },
+      ],
+      tool_choice: { type: 'function', function: { name: 'display_companies' } },
+    }),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`AI query failed: ${resp.status} ${errText}`);
+  }
+
+  const data = await resp.json();
+  const choice = data.choices?.[0];
+  const toolCall = choice?.message?.tool_calls?.[0];
+
+  if (!toolCall || toolCall.function.name !== 'display_companies') {
+    // Fallback: if AI returned text instead of tool call
+    const content = choice?.message?.content || '';
+    return {
+      title: 'AI Response',
+      columns: [{ header: 'Response', key: 'response' }],
+      rows: [{ response: content }],
+    };
+  }
+
+  const args = JSON.parse(toolCall.function.arguments);
+  return {
+    title: args.title || 'Results',
+    columns: args.columns || [],
+    rows: args.rows || [],
+    summary: args.summary,
+  };
 }
 
 function mapCompetitorRows(rows: Record<string, unknown>[]): CompetitorRow[] {

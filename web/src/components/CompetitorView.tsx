@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
-import type { LandscapeData, CompetitorRow } from '../types';
+import type { LandscapeData, CompetitorRow, AIQueryResult } from '../types';
 import { parseDateOrdinal, TimelineBar } from './MarkmapView';
+import { queryCompetitorsAI } from '../api';
 
 interface CompetitorViewProps {
   data: LandscapeData;
@@ -207,12 +208,93 @@ function TableView({ competitors, onHover, onLeave }: {
   );
 }
 
+/* ── AI Query Result Modal ──────────────────────────────── */
+
+function AIResultModal({ result, competitors, onClose }: {
+  result: AIQueryResult;
+  competitors: CompetitorRow[];
+  onClose: () => void;
+}) {
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Build a lookup map by company name
+  const compMap = useMemo(() => {
+    const m = new Map<string, CompetitorRow>();
+    for (const c of competitors) m.set(c.name.toLowerCase(), c);
+    return m;
+  }, [competitors]);
+
+  const showTip = useCallback((rowData: Record<string, string>, e: React.MouseEvent) => {
+    clearTimeout(hideTimer.current);
+    // Try to find the competitor by the first column value (usually company name)
+    const nameKey = result.columns[0]?.key;
+    const name = nameKey ? rowData[nameKey] : '';
+    const comp = compMap.get(name?.toLowerCase() || '');
+    if (!comp) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setTooltip({ row: comp, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+  }, [compMap, result.columns]);
+
+  const hideTip = useCallback(() => {
+    hideTimer.current = setTimeout(() => setTooltip(null), 150);
+  }, []);
+
+  return (
+    <div className="ai-modal-overlay" onClick={onClose}>
+      <div className="ai-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ai-modal-header">
+          <h3>{result.title}</h3>
+          <button className="ai-modal-close" onClick={onClose}>{'\u2715'}</button>
+        </div>
+
+        {result.summary && (
+          <div className="ai-modal-summary">{result.summary}</div>
+        )}
+
+        <div className="ai-modal-table-wrap">
+          <table className="ai-modal-table">
+            <thead>
+              <tr>
+                {result.columns.map(col => (
+                  <th key={col.key}>{col.header}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {result.rows.map((row, i) => (
+                <tr key={i} onMouseEnter={(e) => showTip(row, e)} onMouseLeave={hideTip}>
+                  {result.columns.map(col => (
+                    <td key={col.key}>{row[col.key] || '—'}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="ai-modal-footer">
+          {result.rows.length} results
+        </div>
+      </div>
+
+      {tooltip && <CompanyTooltip {...tooltip} />}
+    </div>
+  );
+}
+
 /* ── Main component ─────────────────────────────────────── */
 
 export function CompetitorView({ data }: CompetitorViewProps) {
   const [view, setView] = useState<'map' | 'table'>('map');
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // AI query state
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<AIQueryResult | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Helper: get date string from competitor (handles both 'date' and 'added_date' DB column)
   const getDate = useCallback((c: CompetitorRow): string => {
@@ -256,6 +338,21 @@ export function CompetitorView({ data }: CompetitorViewProps) {
     hideTimer.current = setTimeout(() => setTooltip(null), 150);
   }, []);
 
+  const handleAiQuery = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiQuery.trim() || aiLoading) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const result = await queryCompetitorsAI(aiQuery, data.competitors);
+      setAiResult(result);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Query failed');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiQuery, aiLoading, data.competitors]);
+
   const { meta } = data;
 
   return (
@@ -265,6 +362,21 @@ export function CompetitorView({ data }: CompetitorViewProps) {
           <h2>{meta.title}</h2>
           <p>{meta.subtitle}{meta.last_update ? ` · Updated ${meta.last_update}` : ''}</p>
         </div>
+
+        <form className="ai-query-bar" onSubmit={handleAiQuery}>
+          <input
+            type="text"
+            className="ai-query-input"
+            placeholder="Ask AI about competitors... e.g. &quot;Which companies use AI for compliance?&quot;"
+            value={aiQuery}
+            onChange={(e) => setAiQuery(e.target.value)}
+            disabled={aiLoading}
+          />
+          <button type="submit" className="ai-query-btn" disabled={aiLoading}>
+            {aiLoading ? 'Analyzing...' : 'Ask AI'}
+          </button>
+        </form>
+        {aiError && <div className="ai-query-error">{aiError}</div>}
 
         <div className="landscape-toolbar">
           <span className="landscape-count">{filtered.length} companies{allDates.length > 1 ? ` (of ${data.competitors.length})` : ''}</span>
@@ -285,6 +397,8 @@ export function CompetitorView({ data }: CompetitorViewProps) {
       <TimelineBar allDates={allDates} dateIndex={dateIndex} setDateIndex={setDateIndex} />
 
       {tooltip && <CompanyTooltip {...tooltip} />}
+
+      {aiResult && <AIResultModal result={aiResult} competitors={data.competitors} onClose={() => setAiResult(null)} />}
     </div>
   );
 }

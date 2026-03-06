@@ -1203,5 +1203,168 @@ body::before {
 .task-blocked { color: var(--red); }
 .task-dup { color: var(--orange); }
 
+/* ── AI Query Bar ────────────────────────────── */
+.ai-query-bar {
+  display: flex; gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ai-query-input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.ai-query-input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px var(--purple-light);
+}
+
+.ai-query-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--purple);
+  background: var(--purple);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.ai-query-btn:hover { box-shadow: 0 2px 8px rgba(95,77,153,0.3); transform: translateY(-1px); }
+.ai-query-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+.ai-query-error {
+  font-size: 12px;
+  color: var(--red);
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--red-light);
+  border-radius: 6px;
+}
+
+/* ── AI Result Modal ─────────────────────────── */
+.ai-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(42, 37, 32, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalOverlayIn 0.2s ease;
+}
+@keyframes modalOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.ai-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  max-width: 900px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: modalIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ai-modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text);
+}
+.ai-modal-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.ai-modal-close:hover {
+  background: var(--red-light);
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.ai-modal-summary {
+  padding: 14px 24px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.55;
+  background: var(--purple-light);
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-modal-table-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.ai-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.ai-modal-table thead { background: var(--surface2); position: sticky; top: 0; z-index: 1; }
+.ai-modal-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ai-modal-table td {
+  padding: 10px 16px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  line-height: 1.45;
+}
+.ai-modal-table tr:last-child td { border-bottom: none; }
+.ai-modal-table tr:hover td { background: var(--surface2); }
+.ai-modal-table td:first-child { font-weight: 600; color: var(--text); }
+
+.ai-modal-footer {
+  padding: 12px 24px;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  border-top: 1px solid var(--border);
+  text-align: right;
+}
+
 /* ── Selection ───────────────────────────────── */
 ::selection { background: var(--green-light); color: var(--green); }

@@ -103,4 +103,16 @@ export interface LinearTask {
   similarity?: number;
 }
 
+export interface AIQueryColumn {
+  header: string;
+  key: string;
+}
+
+export interface AIQueryResult {
+  title: string;
+  columns: AIQueryColumn[];
+  rows: Record<string, string>[];
+  summary?: string;
+}
+
 export type ViewType = 'overview' | 'd3' | 'competitor' | 'tasks';
