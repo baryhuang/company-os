@@ -27,7 +27,7 @@ if (!API_KEY && !dryRun) {
 const TREE_DIMENSIONS = [
   'market', 'product', 'bizmodel', 'org', 'gtm', 'messaging',
   'moat', 'people', 'network', 'validation', 'data', 'build',
-  'human_ai_teaming', 'sales',
+  'human_ai_teaming',
 ];
 
 let totalRows = 0;

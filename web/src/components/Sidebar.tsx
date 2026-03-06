@@ -9,7 +9,7 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const NUM_LABELS = ['\u2460', '\u2461', '\u2462', '\u2463', '\u2464', '\u2465', '\u2466', '\u2467'];
+const NUM_LABELS = ['\u2460', '\u2461', '\u2462', '\u2463', '\u2464', '\u2465', '\u2466', '\u2467', '\u2468', '\u2469', '\u246A', '\u246B', '\u246C', '\u246D'];
 
 export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, open, onClose }: SidebarProps) {
   const handleClick = (view: ViewType, dimIndex?: number) => {

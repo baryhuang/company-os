@@ -77,60 +77,75 @@ async function dbSelectNodes(userId: string, dimension: string): Promise<TreeNod
 export async function initializeUserData(userId: string): Promise<void> {
   if (isDev) return; // local files need no init
 
-  // Copy all __default__ atlas_documents rows into the user's namespace
-  const { data: defaults, error } = await insforge.database
+  // Check if user already has documents — skip if so (idempotent)
+  const { data: existing } = await insforge.database
     .from(DOC_TABLE)
-    .select('doc_key, data')
-    .eq('user_id', '__default__');
+    .select('doc_key')
+    .eq('user_id', userId)
+    .limit(1);
 
-  if (error || !defaults) {
-    throw new Error(`Failed to load defaults: ${error?.message ?? 'no data'}`);
+  if (!existing || existing.length === 0) {
+    const { data: defaults, error } = await insforge.database
+      .from(DOC_TABLE)
+      .select('doc_key, data')
+      .eq('user_id', '__default__');
+
+    if (error || !defaults) {
+      throw new Error(`Failed to load defaults: ${error?.message ?? 'no data'}`);
+    }
+
+    const docRows = (defaults as { doc_key: string; data: unknown }[]).map((r) => ({
+      user_id: userId,
+      doc_key: r.doc_key,
+      data: r.data,
+    }));
+
+    const { error: docInsertError } = await insforge.database
+      .from(DOC_TABLE)
+      .insert(docRows);
+
+    if (docInsertError) {
+      throw new Error(`Failed to initialize user documents: ${docInsertError.message}`);
+    }
   }
 
-  const docRows = (defaults as { doc_key: string; data: unknown }[]).map((r) => ({
-    user_id: userId,
-    doc_key: r.doc_key,
-    data: r.data,
-  }));
-
-  const { error: docInsertError } = await insforge.database
-    .from(DOC_TABLE)
-    .insert(docRows);
-
-  if (docInsertError) {
-    throw new Error(`Failed to initialize user documents: ${docInsertError.message}`);
-  }
-
-  // Copy all __default__ atlas_nodes rows into the user's namespace
-  const { data: defaultNodes, error: nodesError } = await insforge.database
+  // Check if user already has nodes — skip if so
+  const { data: existingNodes } = await insforge.database
     .from(NODE_TABLE)
-    .select('*')
-    .eq('user_id', '__default__');
+    .select('path')
+    .eq('user_id', userId)
+    .limit(1);
 
-  if (nodesError || !defaultNodes) {
-    throw new Error(`Failed to load default nodes: ${nodesError?.message ?? 'no data'}`);
-  }
+  if (!existingNodes || existingNodes.length === 0) {
+    const { data: defaultNodes, error: nodesError } = await insforge.database
+      .from(NODE_TABLE)
+      .select('*')
+      .eq('user_id', '__default__');
 
-  type NodeRow = Record<string, unknown>;
-  const nodeRows = (defaultNodes as NodeRow[]).map((r) => ({
-    ...r,
-    user_id: userId,
-    created_at: undefined,
-    updated_at: undefined,
-  }));
+    if (nodesError || !defaultNodes) {
+      throw new Error(`Failed to load default nodes: ${nodesError?.message ?? 'no data'}`);
+    }
 
-  // Remove undefined keys
-  for (const row of nodeRows) {
-    delete row.created_at;
-    delete row.updated_at;
-  }
+    type NodeRow = Record<string, unknown>;
+    const nodeRows = (defaultNodes as NodeRow[]).map((r) => ({
+      ...r,
+      user_id: userId,
+      created_at: undefined,
+      updated_at: undefined,
+    }));
 
-  const { error: nodeInsertError } = await insforge.database
-    .from(NODE_TABLE)
-    .insert(nodeRows);
+    for (const row of nodeRows) {
+      delete row.created_at;
+      delete row.updated_at;
+    }
 
-  if (nodeInsertError) {
-    throw new Error(`Failed to initialize user nodes: ${nodeInsertError.message}`);
+    const { error: nodeInsertError } = await insforge.database
+      .from(NODE_TABLE)
+      .insert(nodeRows);
+
+    if (nodeInsertError) {
+      throw new Error(`Failed to initialize user nodes: ${nodeInsertError.message}`);
+    }
   }
 }
 
