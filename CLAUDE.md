@@ -29,6 +29,18 @@ cd web && bun run build               # outputs to web/dist/
 # Docker
 docker compose up --build             # bot + dashboard on :8080
 
+# Atlas data sync (requires INSFORGE_API_KEY)
+bun scripts/sync-atlas-to-db.ts           # sync git-dirty files (auto-snapshots first)
+bun scripts/sync-atlas-to-db.ts --all     # force sync all files
+bun scripts/sync-atlas-to-db.ts market moat  # sync specific keys
+
+# Atlas snapshots (requires INSFORGE_API_KEY)
+bun scripts/snapshot-atlas.ts                          # create snapshot for __default__
+bun scripts/snapshot-atlas.ts --label "before rewrite" # create with custom label
+bun scripts/snapshot-atlas.ts --list                   # list recent snapshots
+bun scripts/snapshot-atlas.ts --restore <id>           # restore from snapshot
+bun scripts/snapshot-atlas.ts --prune --keep 20        # delete old, keep latest 20
+
 # Server setup (Linux)
 chmod +x setup_server.sh && ./setup_server.sh
 ```
@@ -58,10 +70,16 @@ chmod +x setup_server.sh && ./setup_server.sh
 - `market.json`, `product.json`, etc. — Tree data for each dimension
 - `competitor.json` — Competitive landscape evolution stages
 
+### Scripts (`scripts/`)
+- `scripts/sync-atlas-to-db.ts` — Diff-based sync of local JSON files to DB (auto-snapshots before sync)
+- `scripts/snapshot-atlas.ts` — Atlas data versioning: create, list, restore, prune snapshots
+- `scripts/migrate-atlas-to-nodes.ts` — One-time migration to flat node schema
+- `scripts/lib/flatten-tree.ts` — Shared tree flatten/assemble utilities, `AtlasNodeRow` type
+- `scripts/rclone-sync.sh` — Pull files from / push transcripts to Google Drive
+
 ### Root (standalone tools)
 - `transcribe.py` — CLI entry point, handles language detection and file discovery
 - `drive_watcher.py` — Daemon polling local inbox dir, calls transcribe for new files
-- `scripts/rclone-sync.sh` — Pull files from / push transcripts to Google Drive
 - `systemd/` — Service files for Linux deployment
 
 ## API Endpoints
@@ -79,6 +97,12 @@ chmod +x setup_server.sh && ./setup_server.sh
 - `OPENAI_API_KEY` (optional) — Summarization
 - `S3_BUCKET` (optional) — S3 sync for file storage
 - `ATLAS_DATA_DIR` (optional) — Override atlas data directory (defaults to `data/reports/data/`)
+
+## Database Tables (InsForge/Postgres)
+
+- `atlas_documents` — JSONB blobs for non-tree data (dimensions, competitor), keyed by `(user_id, doc_key)`
+- `atlas_nodes` — Flat per-node rows for tree dimensions, keyed by `(user_id, dimension, path)`
+- `atlas_snapshots` — Point-in-time backups of all documents + nodes for a user. Auto-created before each sync, can be manually created/restored/pruned via `scripts/snapshot-atlas.ts`
 
 ## Language Detection
 

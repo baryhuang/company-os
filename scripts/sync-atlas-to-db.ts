@@ -16,6 +16,7 @@ import { execSync } from 'child_process';
 import { readFileSync, readdirSync } from 'fs';
 import { basename, join } from 'path';
 import { flattenTree, type AtlasNodeRow, type TreeNode } from './lib/flatten-tree';
+import { createSnapshot } from './snapshot-atlas';
 
 const DATA_DIR = join(import.meta.dir, '../data/reports/data');
 const API_KEY = process.env.INSFORGE_API_KEY;
@@ -227,6 +228,14 @@ if (args.includes('--all')) {
 }
 
 const start = performance.now();
+
+// Create a snapshot before syncing so we can recover if needed
+try {
+  const label = `pre-sync ${new Date().toISOString().slice(0, 10)}`;
+  await createSnapshot(USER_ID, label);
+} catch (err) {
+  console.warn(`Warning: snapshot failed, proceeding with sync: ${err}`);
+}
 
 const docCount = await syncDocuments(keys);
 const { inserted, updated, deleted } = await syncNodes(keys);
