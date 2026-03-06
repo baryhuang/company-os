@@ -12,13 +12,13 @@ import type { ViewType } from './types';
 function AuthenticatedApp() {
   const { user } = useUser();
   const userId = user!.id;
-  const { dimensions, dimensionsData, competitorData, loading, error } = useAtlasData(userId);
+  const { dimensions, dimensionsData, competitorData, progressData, loading, error } = useAtlasData(userId);
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [currentDimIndex, setCurrentDimIndex] = useState(0);
   const [expandLevel, setExpandLevel] = useState(-1);
   const [fitRequest, setFitRequest] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('tree');
+  const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('gantt');
 
   const handleSwitch = useCallback((view: ViewType, dimIndex?: number) => {
     setCurrentView(view);
@@ -94,7 +94,7 @@ function AuthenticatedApp() {
                 </div>
               )}
               {buildTab === 'gantt' && dimensions[currentDimIndex].id === 'build'
-                ? <SwimGanttView treeData={dimensionsData[dimensions[currentDimIndex].id]} />
+                ? <SwimGanttView treeData={progressData || dimensionsData[dimensions[currentDimIndex].id]} />
                 : <MarkmapDimensionView
                     treeData={dimensionsData[dimensions[currentDimIndex].id]}
                     expandLevel={expandLevel}

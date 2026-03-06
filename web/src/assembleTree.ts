@@ -28,6 +28,12 @@ export function assembleTree(rows: AtlasNodeRow[]): TreeNode {
     if (row.extra && typeof row.extra === 'object') {
       if ('feedback' in row.extra) node.feedback = row.extra.feedback as string;
       if ('structure' in row.extra) node.structure = row.extra.structure as string[];
+      if ('owner' in row.extra) node.owner = row.extra.owner as string;
+      if ('supervisor' in row.extra) node.supervisor = row.extra.supervisor as string;
+      if ('support' in row.extra) node.support = row.extra.support as string;
+      if ('executor' in row.extra) node.executor = row.extra.executor as string;
+      if ('deadline' in row.extra) node.deadline = row.extra.deadline as string;
+      if ('timeline' in row.extra) node.timeline = row.extra.timeline as string;
     }
 
     nodeMap.set(row.path, node);

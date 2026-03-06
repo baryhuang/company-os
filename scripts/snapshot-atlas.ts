@@ -202,8 +202,9 @@ async function pruneSnapshots(userId: string, keep: number): Promise<void> {
   console.log(`Pruned ${result.length} old snapshot(s), kept latest ${keep}`);
 }
 
-// ── CLI ──────────────────────────────────────────────────────────────
+// ── CLI (only when run directly) ─────────────────────────────────────
 
+if (import.meta.main) {
 const args = process.argv.slice(2);
 
 function getArg(flag: string): string | undefined {
@@ -231,3 +232,4 @@ if (args.includes('--list')) {
   const label = getArg('--label') ?? `manual ${new Date().toISOString().slice(0, 10)}`;
   await createSnapshot(userId, label);
 }
+} // end if (import.meta.main)

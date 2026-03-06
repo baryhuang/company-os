@@ -19,6 +19,12 @@ export interface TreeNode {
   structure?: string[];
   verified?: boolean;
   children?: TreeNode[];
+  owner?: string;
+  supervisor?: string;
+  support?: string;
+  executor?: string;
+  deadline?: string;
+  timeline?: string;
 }
 
 export interface Competitor {

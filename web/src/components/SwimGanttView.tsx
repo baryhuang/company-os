@@ -35,9 +35,27 @@ interface TooltipState {
   data: TreeNode | null;
 }
 
-/* ── Date extraction from messy text ── */
+/* ── Try parsing an ISO date string (YYYY-MM-DD) ── */
+function parseISODate(s: string): Date | null {
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+}
+
+/* ── Date extraction from node fields ── */
 function parseDates(node: TreeNode): { start: Date | null; end: Date | null; isMilestone: boolean } {
-  const text = `${node.date || ''} ${node.desc || ''}`;
+  // Try ISO date format first (e.g. "2026-02-23")
+  const isoStart = node.date ? parseISODate(node.date) : null;
+  const isoDeadline = node.deadline ? parseISODate(node.deadline) : null;
+
+  if (isoStart) {
+    // End is deadline if present, otherwise end of the start month
+    const end = isoDeadline || new Date(isoStart.getFullYear(), isoStart.getMonth() + 1, 0);
+    return { start: isoStart, end, isMilestone: false };
+  }
+
+  // Fallback: parse month abbreviations from text
+  const text = `${node.date || ''} ${node.deadline || ''} ${node.desc || ''}`;
   const monthRe = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/gi;
   const matches: string[] = [];
   let m: RegExpExecArray | null;
@@ -48,12 +66,15 @@ function parseDates(node: TreeNode): { start: Date | null; end: Date | null; isM
   const indices = matches.map(monthIndex).filter(i => i >= 0);
   const unique = [...new Set(indices)].sort((a, b) => a - b);
 
-  const isMilestone = /deadline|完成|开张|finished/i.test(text) ||
+  const hasDeadline = !!node.deadline;
+  const isMilestone = hasDeadline || /deadline|完成|开张|finished/i.test(text) ||
     (unique.length === 1 && /\b\d{1,2}\b/.test(node.date || ''));
 
   const year = 2026;
   const startMonth = unique[0];
-  const endMonth = unique[unique.length - 1];
+  // If there's a deadline, use it as the end date
+  const deadlineMonths = (node.deadline || '').match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i);
+  const endMonth = deadlineMonths ? monthIndex(deadlineMonths[1]) : unique[unique.length - 1];
 
   // Try to extract specific day from date field
   const dayRe = /\b(\d{1,2})\b/;
@@ -65,7 +86,7 @@ function parseDates(node: TreeNode): { start: Date | null; end: Date | null; isM
     ? new Date(year, endMonth + 1, 0) // last day of month
     : new Date(year, endMonth + 1, 0);
 
-  return { start, end, isMilestone };
+  return { start, end, isMilestone: hasDeadline ? false : isMilestone };
 }
 
 /* ── Transform tree → swim lanes ── */
@@ -176,7 +197,7 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
       .text(d => MONTHS[d.getMonth()]);
 
     /* ── Today marker ── */
-    const today = new Date(2026, 2, 5); // Mar 5, 2026
+    const today = new Date(2026, 2, 6); // Mar 6, 2026
     const todayX = labelW + x(today);
     g.append('line')
       .attr('x1', todayX).attr('x2', todayX)
@@ -204,7 +225,9 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
         .attr('stroke', '#e8e2d8').attr('stroke-width', 0.5);
 
       // Lane label
-      const labelText = lane.name.length > 28 ? lane.name.slice(0, 27) + '\u2026' : lane.name;
+      const ownerSuffix = lane.node.owner ? ` (${lane.node.owner})` : '';
+      const fullLabel = lane.name + ownerSuffix;
+      const labelText = fullLabel.length > 32 ? fullLabel.slice(0, 31) + '\u2026' : fullLabel;
       g.append('text')
         .attr('x', 12).attr('y', ly + laneH / 2)
         .attr('dominant-baseline', 'central')
@@ -313,8 +336,12 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
         {tooltip.data && (
           <>
             <h3>{tooltip.data.name}</h3>
+            {tooltip.data.owner && <div className="owner"><strong>Owner:</strong> {tooltip.data.owner}</div>}
+            {tooltip.data.supervisor && <div className="owner"><strong>Supervisor:</strong> {tooltip.data.supervisor}</div>}
             {tooltip.data.date && <div className="date">{tooltip.data.date}</div>}
+            {tooltip.data.deadline && <div className="date"><strong>Deadline:</strong> {tooltip.data.deadline}</div>}
             {tooltip.data.desc && <div className="desc">{tooltip.data.desc}</div>}
+            {tooltip.data.timeline && <div className="desc"><strong>Timeline:</strong> {tooltip.data.timeline}</div>}
             {tooltip.data.quotes?.map((q, i) => (
               <div key={i} className="quote">&ldquo;{q}&rdquo;</div>
             ))}

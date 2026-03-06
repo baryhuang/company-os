@@ -15,6 +15,12 @@ export interface TreeNode {
   structure?: string[];
   verified?: boolean;
   children?: TreeNode[];
+  owner?: string;
+  supervisor?: string;
+  support?: string;
+  executor?: string;
+  deadline?: string;
+  timeline?: string;
 }
 
 export interface AtlasNodeRow {
@@ -54,6 +60,12 @@ export function flattenTree(
     const extra: Record<string, unknown> = {};
     if (node.feedback) extra.feedback = node.feedback;
     if (node.structure) extra.structure = node.structure;
+    if (node.owner) extra.owner = node.owner;
+    if (node.supervisor) extra.supervisor = node.supervisor;
+    if (node.support) extra.support = node.support;
+    if (node.executor) extra.executor = node.executor;
+    if (node.deadline) extra.deadline = node.deadline;
+    if (node.timeline) extra.timeline = node.timeline;
 
     rows.push({
       user_id: userId,
@@ -97,6 +109,12 @@ export function assembleTree(rows: AtlasNodeRow[]): TreeNode {
       if (typeof row.extra === 'object') {
         if ('feedback' in row.extra) node.feedback = row.extra.feedback as string;
         if ('structure' in row.extra) node.structure = row.extra.structure as string[];
+        if ('owner' in row.extra) node.owner = row.extra.owner as string;
+        if ('supervisor' in row.extra) node.supervisor = row.extra.supervisor as string;
+        if ('support' in row.extra) node.support = row.extra.support as string;
+        if ('executor' in row.extra) node.executor = row.extra.executor as string;
+        if ('deadline' in row.extra) node.deadline = row.extra.deadline as string;
+        if ('timeline' in row.extra) node.timeline = row.extra.timeline as string;
       }
     }
 

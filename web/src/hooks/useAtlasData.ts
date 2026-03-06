@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { fetchDimensions, fetchDimensionData, fetchCompetitorData, initializeUserData } from '../api';
+import { fetchDimensions, fetchDimensionData, fetchCompetitorData, fetchProgressData, initializeUserData } from '../api';
 import type { DimensionMeta, TreeNode, CompetitorData } from '../types';
 
 interface AtlasData {
   dimensions: DimensionMeta[];
   dimensionsData: Record<string, TreeNode>;
   competitorData: CompetitorData | null;
+  progressData: TreeNode | null;
   loading: boolean;
   error: string | null;
 }
@@ -14,6 +15,7 @@ export function useAtlasData(userId: string): AtlasData {
   const [dimensions, setDimensions] = useState<DimensionMeta[]>([]);
   const [dimensionsData, setDimensionsData] = useState<Record<string, TreeNode>>({});
   const [competitorData, setCompetitorData] = useState<CompetitorData | null>(null);
+  const [progressData, setProgressData] = useState<TreeNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +33,7 @@ export function useAtlasData(userId: string): AtlasData {
           return { id: d.id, data };
         }),
         fetchCompetitorData(userId).then(data => ({ id: '__comp__', data })),
+        fetchProgressData(userId).then(data => ({ id: '__progress__', data })),
       ]);
 
       if (cancelled) return;
@@ -39,6 +42,8 @@ export function useAtlasData(userId: string): AtlasData {
       for (const r of results) {
         if (r.id === '__comp__') {
           setCompetitorData(r.data as CompetitorData);
+        } else if (r.id === '__progress__') {
+          setProgressData(r.data as TreeNode);
         } else {
           dataMap[r.id] = r.data as TreeNode;
         }
@@ -70,5 +75,5 @@ export function useAtlasData(userId: string): AtlasData {
     return () => { cancelled = true; };
   }, [userId]);
 
-  return { dimensions, dimensionsData, competitorData, loading, error };
+  return { dimensions, dimensionsData, competitorData, progressData, loading, error };
 }

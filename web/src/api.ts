@@ -163,3 +163,8 @@ export async function fetchCompetitorData(userId: string): Promise<CompetitorDat
   if (isDev) return fetchLocalJson<CompetitorData>('competitor.json');
   return dbSelect<CompetitorData>(userId, 'competitor');
 }
+
+export async function fetchProgressData(userId: string): Promise<TreeNode> {
+  if (isDev) return fetchLocalJson<TreeNode>('progress.json');
+  return dbSelect<TreeNode>(userId, 'progress');
+}
