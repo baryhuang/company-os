@@ -1,4 +1,4 @@
-import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData } from './types';
+import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow } from './types';
 import { insforge } from './insforge';
 import { assembleTree } from './assembleTree';
 
@@ -169,7 +169,66 @@ export async function fetchProgressData(userId: string): Promise<TreeNode> {
   return dbSelect<TreeNode>(userId, 'progress');
 }
 
+const COMP_TABLE = 'atlas_competitors';
+
 export async function fetchLandscapeData(userId: string): Promise<LandscapeData> {
-  if (isDev) return fetchLocalJson<LandscapeData>('landscape.json');
-  return dbSelect<LandscapeData>(userId, 'landscape');
+  if (isDev) {
+    // In dev, build from landscape.json
+    const raw = await fetchLocalJson<{
+      title: string; subtitle: string; last_update?: string;
+      our_position: string; white_space: string;
+      categories: { name: string; best_owner?: string; companies?: CompetitorRow[]; subcategories?: { name: string; companies: CompetitorRow[] }[] }[];
+    }>('landscape.json');
+    const competitors: CompetitorRow[] = [];
+    let sortOrder = 0;
+    for (const cat of raw.categories) {
+      if (cat.companies) {
+        for (const c of cat.companies) {
+          competitors.push({ ...c, section: cat.name, best_owner: cat.best_owner, sort_order: sortOrder++ });
+        }
+      }
+      if (cat.subcategories) {
+        for (const sub of cat.subcategories) {
+          for (const c of sub.companies) {
+            competitors.push({ ...c, section: cat.name, best_owner: cat.best_owner, subcategory: sub.name, sort_order: sortOrder++ });
+          }
+        }
+      }
+    }
+    return {
+      meta: { title: raw.title, subtitle: raw.subtitle, last_update: raw.last_update, our_position: raw.our_position, white_space: raw.white_space },
+      competitors,
+    };
+  }
+
+  // Production: fetch metadata doc + competitor rows in parallel
+  const [meta, competitors] = await Promise.all([
+    dbSelect<LandscapeMeta>(userId, 'landscape'),
+    fetchCompetitorRows(userId),
+  ]);
+  return { meta, competitors };
+}
+
+async function fetchCompetitorRows(userId: string): Promise<CompetitorRow[]> {
+  const { data, error } = await insforge.database
+    .from(COMP_TABLE)
+    .select('*')
+    .eq('user_id', userId)
+    .order('sort_order', { ascending: true });
+
+  if (!error && data && data.length > 0) {
+    return data as CompetitorRow[];
+  }
+
+  // Fallback to defaults
+  const { data: fallback, error: fbError } = await insforge.database
+    .from(COMP_TABLE)
+    .select('*')
+    .eq('user_id', '__default__')
+    .order('sort_order', { ascending: true });
+
+  if (fbError || !fallback || fallback.length === 0) {
+    throw new Error(`DB fetch failed [competitors]: ${fbError?.message ?? 'no data'}`);
+  }
+  return fallback as CompetitorRow[];
 }

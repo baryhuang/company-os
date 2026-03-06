@@ -48,15 +48,39 @@ export interface CompetitorData {
   stages: CompetitorStage[];
 }
 
-export interface LandscapeCompany { name: string; threat: 'high' | 'medium' | 'low' }
-export interface LandscapeSubcategory { name: string; companies: LandscapeCompany[] }
-export interface LandscapeCategory { name: string; companies?: LandscapeCompany[]; subcategories?: LandscapeSubcategory[] }
-export interface LandscapeData {
+export interface CompetitorRow {
+  name: string;
+  section: string;
+  best_owner?: string;
+  subcategory?: string;
+  threat: 'high' | 'medium' | 'low';
+  website?: string;
+  category?: string;
+  primary_focus?: string;
+  target_customer?: string;
+  pricing_model?: string;
+  price_range?: string;
+  funding?: string;
+  serves_cna?: boolean;
+  serves_rn?: boolean;
+  uses_ai?: boolean;
+  key_differentiator?: string;
+  relevance?: string;
+  transcript_quotes?: string[];
+  sort_order?: number;
+}
+
+export interface LandscapeMeta {
   title: string;
   subtitle: string;
+  last_update?: string;
   our_position: string;
   white_space: string;
-  categories: LandscapeCategory[];
+}
+
+export interface LandscapeData {
+  meta: LandscapeMeta;
+  competitors: CompetitorRow[];
 }
 
 export type ViewType = 'overview' | 'd3' | 'competitor' | 'executive-report';
