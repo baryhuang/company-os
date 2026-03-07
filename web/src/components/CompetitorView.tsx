@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import type { LandscapeData, CompetitorRow, AIQueryResult } from '../types';
 import { parseDateOrdinal, TimelineBar } from './MarkmapView';
 import { queryCompetitorsAI } from '../api';
+import { ReactSearchAutocomplete } from 'react-search-autocomplete';
 
 interface CompetitorViewProps {
   data: LandscapeData;
@@ -208,6 +209,44 @@ function TableView({ competitors, onHover, onLeave }: {
   );
 }
 
+/* ── AI Search history ──────────────────────────────────── */
+
+const HISTORY_KEY = 'ai-competitor-search-history';
+const MAX_HISTORY = 10;
+
+interface SearchItem {
+  id: number;
+  name: string;
+  type: 'history' | 'suggestion';
+}
+
+const PRESET_SUGGESTIONS: SearchItem[] = [
+  { id: 1001, name: 'Which companies use AI for compliance?', type: 'suggestion' },
+  { id: 1002, name: 'High threat competitors targeting CNAs', type: 'suggestion' },
+  { id: 1003, name: 'Compare pricing models across competitors', type: 'suggestion' },
+  { id: 1004, name: 'Companies serving both CNA and RN markets', type: 'suggestion' },
+  { id: 1005, name: 'Well-funded competitors with AI capabilities', type: 'suggestion' },
+  { id: 1006, name: 'What are the key differentiators of top threats?', type: 'suggestion' },
+];
+
+function loadHistory(): SearchItem[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as SearchItem[];
+  } catch { return []; }
+}
+
+function saveHistory(items: SearchItem[]) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, MAX_HISTORY)));
+}
+
+function addToHistory(query: string) {
+  const history = loadHistory().filter(h => h.name !== query);
+  const newItem: SearchItem = { id: Date.now(), name: query, type: 'history' };
+  saveHistory([newItem, ...history]);
+}
+
 /* ── AI Query Result Modal ──────────────────────────────── */
 
 function AIResultModal({ result, competitors, onClose }: {
@@ -218,7 +257,6 @@ function AIResultModal({ result, competitors, onClose }: {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Build a lookup map by company name
   const compMap = useMemo(() => {
     const m = new Map<string, CompetitorRow>();
     for (const c of competitors) m.set(c.name.toLowerCase(), c);
@@ -227,7 +265,6 @@ function AIResultModal({ result, competitors, onClose }: {
 
   const showTip = useCallback((rowData: Record<string, string>, e: React.MouseEvent) => {
     clearTimeout(hideTimer.current);
-    // Try to find the competitor by the first column value (usually company name)
     const nameKey = result.columns[0]?.key;
     const name = nameKey ? rowData[nameKey] : '';
     const comp = compMap.get(name?.toLowerCase() || '');
@@ -296,6 +333,29 @@ export function CompetitorView({ data }: CompetitorViewProps) {
   const [aiResult, setAiResult] = useState<AIQueryResult | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  // Autocomplete items: history + suggestions
+  const [searchItems, setSearchItems] = useState<SearchItem[]>([]);
+
+  useEffect(() => {
+    setSearchItems([...loadHistory(), ...PRESET_SUGGESTIONS]);
+  }, []);
+
+  const fireQuery = useCallback(async (query: string) => {
+    if (!query.trim() || aiLoading) return;
+    addToHistory(query);
+    setSearchItems([...loadHistory(), ...PRESET_SUGGESTIONS]);
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const result = await queryCompetitorsAI(query, data.competitors);
+      setAiResult(result);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Query failed');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiLoading, data.competitors]);
+
   // Helper: get date string from competitor (handles both 'date' and 'added_date' DB column)
   const getDate = useCallback((c: CompetitorRow): string => {
     if (c.date) return c.date;
@@ -338,22 +398,16 @@ export function CompetitorView({ data }: CompetitorViewProps) {
     hideTimer.current = setTimeout(() => setTooltip(null), 150);
   }, []);
 
-  const handleAiQuery = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiQuery.trim() || aiLoading) return;
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const result = await queryCompetitorsAI(aiQuery, data.competitors);
-      setAiResult(result);
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'Query failed');
-    } finally {
-      setAiLoading(false);
-    }
-  }, [aiQuery, aiLoading, data.competitors]);
-
   const { meta } = data;
+
+  const formatResult = (item: SearchItem) => (
+    <div className="ai-search-result-item">
+      <span className={`ai-search-icon ${item.type}`}>
+        {item.type === 'history' ? '\u23F3' : '\u2728'}
+      </span>
+      <span>{item.name}</span>
+    </div>
+  );
 
   return (
     <div className="competitor-view">
@@ -363,19 +417,48 @@ export function CompetitorView({ data }: CompetitorViewProps) {
           <p>{meta.subtitle}{meta.last_update ? ` · Updated ${meta.last_update}` : ''}</p>
         </div>
 
-        <form className="ai-query-bar" onSubmit={handleAiQuery}>
-          <input
-            type="text"
-            className="ai-query-input"
-            placeholder="Ask AI about competitors... e.g. &quot;Which companies use AI for compliance?&quot;"
-            value={aiQuery}
-            onChange={(e) => setAiQuery(e.target.value)}
-            disabled={aiLoading}
+        <div className="ai-query-bar">
+          {aiLoading && (
+            <div className="ai-query-loading-overlay">
+              <div className="ai-query-spinner" />
+              <span>Analyzing competitors...</span>
+            </div>
+          )}
+          <ReactSearchAutocomplete<SearchItem>
+            items={searchItems}
+            onSearch={(string) => setAiQuery(string)}
+            onSelect={(item) => fireQuery(item.name)}
+            onClear={() => setAiQuery('')}
+            inputSearchString={aiQuery}
+            placeholder="Ask AI about competitors..."
+            formatResult={formatResult}
+            showItemsOnFocus
+            maxResults={8}
+            styling={{
+              height: '44px',
+              border: '1px solid var(--border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text)',
+              fontSize: '13px',
+              fontFamily: 'var(--font-body)',
+              iconColor: 'var(--purple)',
+              placeholderColor: 'var(--text3)',
+              hoverBackgroundColor: 'var(--purple-light)',
+              boxShadow: 'none',
+              clearIconMargin: '3px 8px 0 0',
+              zIndex: 10,
+            }}
+            fuseOptions={{ keys: ['name'], threshold: 0.4 }}
           />
-          <button type="submit" className="ai-query-btn" disabled={aiLoading}>
-            {aiLoading ? 'Analyzing...' : 'Ask AI'}
+          <button
+            className="ai-query-btn"
+            disabled={aiLoading || !aiQuery.trim()}
+            onClick={() => fireQuery(aiQuery)}
+          >
+            Ask AI
           </button>
-        </form>
+        </div>
         {aiError && <div className="ai-query-error">{aiError}</div>}
 
         <div className="landscape-toolbar">

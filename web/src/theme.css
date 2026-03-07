@@ -1207,27 +1207,13 @@ body::before {
 .ai-query-bar {
   display: flex; gap: 8px;
   margin-bottom: 16px;
+  position: relative;
+  align-items: flex-start;
 }
-
-.ai-query-input {
-  flex: 1;
-  padding: 10px 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: var(--font-body);
-  background: var(--surface);
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.ai-query-input:focus {
-  border-color: var(--purple);
-  box-shadow: 0 0 0 3px var(--purple-light);
-}
+.ai-query-bar > div:first-child { flex: 1; }
 
 .ai-query-btn {
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-radius: 8px;
   border: 1px solid var(--purple);
   background: var(--purple);
@@ -1239,9 +1225,38 @@ body::before {
   letter-spacing: 0.5px;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .ai-query-btn:hover { box-shadow: 0 2px 8px rgba(95,77,153,0.3); transform: translateY(-1px); }
 .ai-query-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+.ai-query-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(250, 248, 244, 0.92);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--purple);
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.ai-query-spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--purple-light);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
 
 .ai-query-error {
   font-size: 12px;
@@ -1250,6 +1265,21 @@ body::before {
   padding: 8px 12px;
   background: var(--red-light);
   border-radius: 6px;
+}
+
+/* Search autocomplete dropdown styling */
+.ai-search-result-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--text2);
+}
+.ai-search-icon { font-size: 13px; flex-shrink: 0; }
+.ai-search-icon.history { opacity: 0.5; }
+.ai-search-icon.suggestion { color: var(--purple); }
+
+/* Override react-search-autocomplete internals */
+.ai-query-bar input:focus {
+  border-color: var(--purple) !important;
+  box-shadow: 0 0 0 3px var(--purple-light) !important;
 }
 
 /* ── AI Result Modal ─────────────────────────── */
