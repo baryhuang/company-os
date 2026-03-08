@@ -190,9 +190,24 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
     totalH -= laneGap; // remove trailing gap
     const svgH = totalH + margin.top + margin.bottom;
 
-    /* ── Scales ── */
-    const timeStart = new Date(2026, 1, 1);  // Feb 1
-    const timeEnd = new Date(2026, 11, 1);    // Dec 1
+    /* ── Scales (dynamic based on task dates) ── */
+    let minDate = new Date(2099, 0, 1);
+    let maxDate = new Date(2000, 0, 1);
+    for (const lane of lanes) {
+      for (const task of lane.tasks) {
+        if (task.start < minDate) minDate = task.start;
+        if (task.end > maxDate) maxDate = task.end;
+        if (task.start > maxDate) maxDate = task.start;
+      }
+    }
+    // Fallback if no tasks
+    if (minDate > maxDate) {
+      minDate = new Date(2026, 1, 1);
+      maxDate = new Date(2026, 3, 1);
+    }
+    // Start at beginning of earliest month, end 2 weeks after last end date
+    const timeStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const timeEnd = new Date(maxDate.getTime() + 14 * 24 * 60 * 60 * 1000);
     const x = d3.scaleTime().domain([timeStart, timeEnd]).range([0, chartW]);
 
     /* ── SVG ── */
@@ -203,7 +218,7 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
     /* ── Month grid ── */
-    const monthTicks = d3.timeMonths(timeStart, new Date(2026, 11, 2));
+    const monthTicks = d3.timeMonths(timeStart, d3.timeMonth.offset(timeEnd, 1));
     // Gridlines
     g.selectAll('.grid-line').data(monthTicks).join('line')
       .attr('x1', d => labelW + x(d)).attr('x2', d => labelW + x(d))
@@ -284,6 +299,16 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
         const ty = ly + lanePadY + ti * rowH + rowH / 2;
         const barColor = statusColors[task.status] || '#8a9e8c';
 
+        const showTip = (event: MouseEvent) => {
+          setTooltip({
+            visible: true,
+            x: Math.min(event.clientX + 16, window.innerWidth - 420),
+            y: Math.min(event.clientY - 20, window.innerHeight - 300),
+            data: task.node,
+          });
+        };
+        const hideTip = () => setTooltip(prev => ({ ...prev, visible: false }));
+
         if (task.isMilestone) {
           // Diamond milestone marker
           const mx = labelW + x(task.start);
@@ -294,22 +319,18 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
             .attr('fill', barColor)
             .attr('stroke', '#fff').attr('stroke-width', 1.5)
             .style('cursor', 'pointer')
-            .on('click', (event: MouseEvent) => {
-              event.stopPropagation();
-              setTooltip({
-                visible: true,
-                x: Math.min(event.clientX + 16, window.innerWidth - 420),
-                y: Math.min(event.clientY - 20, window.innerHeight - 300),
-                data: task.node,
-              });
-            });
+            .on('mouseenter', (event: MouseEvent) => showTip(event))
+            .on('mouseleave', hideTip);
           // Milestone label
           g.append('text')
             .attr('x', mx + 12).attr('y', ty)
             .attr('dominant-baseline', 'central')
             .attr('fill', barColor).attr('font-size', '9.5px').attr('font-weight', '600')
             .attr('font-family', "'DM Sans', sans-serif")
-            .text(task.name.length > 20 ? task.name.slice(0, 19) + '\u2026' : task.name);
+            .text(task.name.length > 20 ? task.name.slice(0, 19) + '\u2026' : task.name)
+            .style('cursor', 'pointer')
+            .on('mouseenter', (event: MouseEvent) => showTip(event))
+            .on('mouseleave', hideTip);
         } else {
           // Bar
           const bx = labelW + x(task.start);
@@ -321,15 +342,8 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
             .attr('fill', barColor).attr('opacity', 0.2)
             .attr('stroke', barColor).attr('stroke-width', 1)
             .style('cursor', 'pointer')
-            .on('click', (event: MouseEvent) => {
-              event.stopPropagation();
-              setTooltip({
-                visible: true,
-                x: Math.min(event.clientX + 16, window.innerWidth - 420),
-                y: Math.min(event.clientY - 20, window.innerHeight - 300),
-                data: task.node,
-              });
-            });
+            .on('mouseenter', (event: MouseEvent) => showTip(event))
+            .on('mouseleave', hideTip);
           // Bar label
           const maxLabelLen = Math.floor(bw / 7);
           const label = task.name.length > maxLabelLen
@@ -340,12 +354,13 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
             .attr('dominant-baseline', 'central')
             .attr('fill', '#2a2520').attr('font-size', '10px').attr('font-weight', '600')
             .attr('font-family', "'DM Sans', sans-serif")
-            .text(label);
+            .text(label)
+            .style('pointer-events', 'none');
         }
       });
     });
 
-    // Click outside to dismiss tooltip
+    // Click outside to dismiss tooltip (for lane label click-to-show)
     svg.on('click', () => setTooltip(prev => ({ ...prev, visible: false })));
 
     return () => { el.innerHTML = ''; };
@@ -357,7 +372,9 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
         <div ref={containerRef} />
         <div
           className={`tooltip${tooltip.visible ? ' visible' : ''}`}
-          style={{ left: tooltip.x, top: tooltip.y }}
+          style={{ left: tooltip.x, top: tooltip.y, pointerEvents: tooltip.visible ? 'auto' : 'none' }}
+          onMouseEnter={() => setTooltip(prev => ({ ...prev, visible: true }))}
+          onMouseLeave={() => setTooltip(prev => ({ ...prev, visible: false }))}
         >
           {tooltip.data && (
             <>
