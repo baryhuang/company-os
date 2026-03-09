@@ -36,58 +36,76 @@ interface TooltipState {
   data: TreeNode | null;
 }
 
-/* ── Try parsing an ISO date string (YYYY-MM-DD) ── */
-function parseISODate(s: string): Date | null {
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-  return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
-}
-
 /* ── Date extraction from node fields ── */
-function parseDates(node: TreeNode): { start: Date | null; end: Date | null; isMilestone: boolean } {
-  // Try ISO date format first (e.g. "2026-02-23")
-  const isoStart = node.date ? parseISODate(node.date) : null;
-  const isoDeadline = node.deadline ? parseISODate(node.deadline) : null;
+function parseDateField(dateStr: string): { month: number; day: number | null; endDay: number | null } | null {
+  if (!dateStr) return null;
 
-  if (isoStart) {
-    // End is deadline if present, otherwise end of the start month
-    const end = isoDeadline || new Date(isoStart.getFullYear(), isoStart.getMonth() + 1, 0);
-    return { start: isoStart, end, isMilestone: false };
+  // ISO "YYYY-MM-DD"
+  const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return { month: parseInt(iso[2], 10) - 1, day: parseInt(iso[3], 10), endDay: null };
+
+  // "MMM DD-DD" range (e.g. "Mar 21-22")
+  const range = dateStr.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s*[-–]\s*(\d{1,2})/i);
+  if (range) return { month: monthIndex(range[1]), day: parseInt(range[2], 10), endDay: parseInt(range[3], 10) };
+
+  // "MMM DD" with optional suffix (e.g. "Mar 14", "Apr 15前", "Jun 9")
+  const mdd = dateStr.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})/i);
+  if (mdd) return { month: monthIndex(mdd[1]), day: parseInt(mdd[2], 10), endDay: null };
+
+  // "MMM底" = end of month (e.g. "Mar底")
+  const mEnd = dateStr.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*底/i);
+  if (mEnd) {
+    const mi = monthIndex(mEnd[1]);
+    const lastDay = new Date(2026, mi + 1, 0).getDate();
+    return { month: mi, day: lastDay, endDay: null };
   }
 
-  // Fallback: parse month abbreviations from text
-  const text = `${node.date || ''} ${node.deadline || ''} ${node.desc || ''}`;
-  const monthRe = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/gi;
-  const matches: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = monthRe.exec(text)) !== null) matches.push(m[1]);
+  // Bare month (e.g. "Apr", "May")
+  const bare = dateStr.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/i);
+  if (bare) return { month: monthIndex(bare[1]), day: null, endDay: null };
 
-  if (matches.length === 0) return { start: null, end: null, isMilestone: false };
+  // "Feb 26 规划, Mar 7 更新" — pick first month+day
+  const first = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})/i);
+  if (first) return { month: monthIndex(first[1]), day: parseInt(first[2], 10), endDay: null };
 
-  const indices = matches.map(monthIndex).filter(i => i >= 0);
-  const unique = [...new Set(indices)].sort((a, b) => a - b);
+  // Last resort: any month name
+  const anyMonth = dateStr.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+  if (anyMonth) return { month: monthIndex(anyMonth[1]), day: null, endDay: null };
 
-  const hasDeadline = !!node.deadline;
-  const isMilestone = hasDeadline || /deadline|完成|开张|finished/i.test(text) ||
-    (unique.length === 1 && /\b\d{1,2}\b/.test(node.date || ''));
+  return null;
+}
 
+function parseDates(node: TreeNode): { start: Date | null; end: Date | null; isMilestone: boolean } {
   const year = 2026;
-  const startMonth = unique[0];
-  // If there's a deadline, use it as the end date
-  const deadlineMonths = (node.deadline || '').match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i);
-  const endMonth = deadlineMonths ? monthIndex(deadlineMonths[1]) : unique[unique.length - 1];
+  const parsed = parseDateField(node.date || '');
+  const deadlineParsed = parseDateField(node.deadline || '');
 
-  // Try to extract specific day from date field
-  const dayRe = /\b(\d{1,2})\b/;
-  const dayMatch = (node.date || '').match(dayRe);
-  const startDay = dayMatch ? Math.min(parseInt(dayMatch[1], 10), 28) : 1;
+  if (!parsed) return { start: null, end: null, isMilestone: false };
 
-  const start = new Date(year, startMonth, isMilestone && dayMatch ? startDay : 1);
-  const end = startMonth === endMonth
-    ? new Date(year, endMonth + 1, 0) // last day of month
-    : new Date(year, endMonth + 1, 0);
+  const hasDeadline = !!node.deadline && !!deadlineParsed;
 
-  return { start, end, isMilestone: hasDeadline ? false : isMilestone };
+  // Build start date
+  const startDay = parsed.day || 1;
+  const start = new Date(year, parsed.month, startDay);
+
+  // Build end date
+  let end: Date;
+  if (hasDeadline && deadlineParsed) {
+    end = new Date(year, deadlineParsed.month, deadlineParsed.day || new Date(year, deadlineParsed.month + 1, 0).getDate());
+  } else if (parsed.endDay) {
+    // Date range like "Mar 21-22"
+    end = new Date(year, parsed.month, parsed.endDay);
+  } else if (parsed.day) {
+    // Specific day = milestone (single point)
+    end = start;
+  } else {
+    // Bare month = span the whole month
+    end = new Date(year, parsed.month + 1, 0);
+  }
+
+  const isMilestone = parsed.day !== null && !parsed.endDay && !hasDeadline && start.getTime() === end.getTime();
+
+  return { start, end, isMilestone };
 }
 
 /* ── Transform tree → swim lanes ── */
@@ -107,6 +125,10 @@ function buildLanes(root: TreeNode): SwimLane[] {
             isMilestone,
             node: n,
           });
+        }
+        // Recurse into children so deeper nodes also appear as tasks
+        if (n.children && n.children.length > 0) {
+          addTasks(n.children);
         }
       }
     };
