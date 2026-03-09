@@ -172,7 +172,8 @@ interface SwimGanttViewProps {
 }
 
 export function SwimGanttView({ treeData }: SwimGanttViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, data: null });
 
   // Timeline state
@@ -186,9 +187,9 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
   }, [treeData, allDates, dateIndex]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const el = containerRef.current;
-    el.innerHTML = '';
+    if (!headerRef.current || !bodyRef.current) return;
+    headerRef.current.innerHTML = '';
+    bodyRef.current.innerHTML = '';
 
     const lanes = buildLanes(filteredTree);
 
@@ -197,8 +198,9 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
     const rowH = 32;
     const laneGap = 12;
     const lanePadY = 8;
-    const margin = { top: 44, right: 24, bottom: 24, left: 16 };
-    const containerWidth = el.parentElement?.clientWidth || 900;
+    const headerH = 36;
+    const margin = { right: 24, bottom: 24, left: 16 };
+    const containerWidth = bodyRef.current.parentElement?.clientWidth || 900;
     const chartW = containerWidth - margin.left - margin.right - labelW;
 
     // Calculate total height
@@ -210,7 +212,8 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
       totalH += rows * rowH + lanePadY * 2 + laneGap;
     }
     totalH -= laneGap; // remove trailing gap
-    const svgH = totalH + margin.top + margin.bottom;
+    const bodyH = totalH + margin.bottom;
+    const svgW = containerWidth - margin.left - margin.right + labelW;
 
     /* ── Scales (dynamic based on task dates) ── */
     let minDate = new Date(2099, 0, 1);
@@ -222,35 +225,24 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
         if (task.start > maxDate) maxDate = task.start;
       }
     }
-    // Fallback if no tasks
     if (minDate > maxDate) {
       minDate = new Date(2026, 1, 1);
       maxDate = new Date(2026, 3, 1);
     }
-    // Start at beginning of earliest month, end 2 weeks after last end date
     const timeStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
     const timeEnd = new Date(maxDate.getTime() + 14 * 24 * 60 * 60 * 1000);
     const x = d3.scaleTime().domain([timeStart, timeEnd]).range([0, chartW]);
-
-    /* ── SVG ── */
-    const svg = d3.select(el).append('svg')
-      .attr('width', containerWidth - margin.left - margin.right + labelW)
-      .attr('height', svgH);
-
-    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-    /* ── Month grid ── */
     const monthTicks = d3.timeMonths(timeStart, d3.timeMonth.offset(timeEnd, 1));
-    // Gridlines
-    g.selectAll('.grid-line').data(monthTicks).join('line')
-      .attr('x1', d => labelW + x(d)).attr('x2', d => labelW + x(d))
-      .attr('y1', 0).attr('y2', totalH)
-      .attr('stroke', '#d8d0c4').attr('stroke-width', 0.5).attr('stroke-dasharray', '3,3');
 
-    // Month labels
-    g.selectAll('.month-label').data(monthTicks).join('text')
+    /* ── Header SVG (sticky month labels + TODAY label) ── */
+    const hSvg = d3.select(headerRef.current).append('svg')
+      .attr('width', svgW).attr('height', headerH);
+    const hg = hSvg.append('g').attr('transform', `translate(${margin.left},0)`);
+
+    // Month labels in header
+    hg.selectAll('.month-label').data(monthTicks).join('text')
       .attr('x', d => labelW + x(d) + (x(d3.timeMonth.offset(d, 1)) - x(d)) / 2)
-      .attr('y', -14)
+      .attr('y', 20)
       .attr('text-anchor', 'middle')
       .attr('fill', '#918a80')
       .attr('font-size', '11px')
@@ -258,19 +250,37 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
       .attr('font-family', "'JetBrains Mono', monospace")
       .text(d => MONTHS[d.getMonth()]);
 
-    /* ── Today marker ── */
-    const today = new Date(2026, 2, 6); // Mar 6, 2026
+    // TODAY label in header
+    const today = new Date(2026, 2, 8); // Mar 8, 2026
     const todayX = labelW + x(today);
-    g.append('line')
-      .attr('x1', todayX).attr('x2', todayX)
-      .attr('y1', -8).attr('y2', totalH)
-      .attr('stroke', '#bf3636').attr('stroke-width', 1.5).attr('stroke-dasharray', '6,4');
-    g.append('text')
-      .attr('x', todayX).attr('y', -20)
+    hg.append('text')
+      .attr('x', todayX).attr('y', 10)
       .attr('text-anchor', 'middle')
       .attr('fill', '#bf3636').attr('font-size', '9px').attr('font-weight', '700')
       .attr('font-family', "'JetBrains Mono', monospace")
       .text('TODAY');
+    // Short tick in header
+    hg.append('line')
+      .attr('x1', todayX).attr('x2', todayX)
+      .attr('y1', 16).attr('y2', headerH)
+      .attr('stroke', '#bf3636').attr('stroke-width', 1.5).attr('stroke-dasharray', '6,4');
+
+    // Bottom border on header
+    hg.append('line')
+      .attr('x1', 0).attr('x2', svgW)
+      .attr('y1', headerH - 0.5).attr('y2', headerH - 0.5)
+      .attr('stroke', '#e8e2d8').attr('stroke-width', 1);
+
+    /* ── Body SVG (lanes + tasks + today line overlay) ── */
+    const bSvg = d3.select(bodyRef.current).append('svg')
+      .attr('width', svgW).attr('height', bodyH);
+    const bg = bSvg.append('g').attr('transform', `translate(${margin.left},0)`);
+
+    // Month gridlines
+    bg.selectAll('.grid-line').data(monthTicks).join('line')
+      .attr('x1', d => labelW + x(d)).attr('x2', d => labelW + x(d))
+      .attr('y1', 0).attr('y2', totalH)
+      .attr('stroke', '#d8d0c4').attr('stroke-width', 0.5).attr('stroke-dasharray', '3,3');
 
     /* ── Lanes ── */
     lanes.forEach((lane, li) => {
@@ -279,7 +289,7 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
       const laneH = rows * rowH + lanePadY * 2;
 
       // Lane background
-      g.append('rect')
+      bg.append('rect')
         .attr('x', 0).attr('y', ly)
         .attr('width', labelW + chartW).attr('height', laneH)
         .attr('rx', 6)
@@ -290,7 +300,7 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
       const ownerSuffix = lane.node.owner ? ` (${lane.node.owner})` : '';
       const fullLabel = lane.name + ownerSuffix;
       const labelText = fullLabel.length > 32 ? fullLabel.slice(0, 31) + '\u2026' : fullLabel;
-      g.append('text')
+      bg.append('text')
         .attr('x', 12).attr('y', ly + laneH / 2)
         .attr('dominant-baseline', 'central')
         .attr('fill', '#2a2520')
@@ -311,7 +321,7 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
 
       // Status dot next to label
       const dotColor = statusColors[lane.status] || '#8a9e8c';
-      g.append('circle')
+      bg.append('circle')
         .attr('cx', labelW - 14).attr('cy', ly + laneH / 2)
         .attr('r', 4)
         .attr('fill', dotColor).attr('opacity', 0.7);
@@ -332,9 +342,8 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
         const hideTip = () => setTooltip(prev => ({ ...prev, visible: false }));
 
         if (task.isMilestone) {
-          // Diamond milestone marker
           const mx = labelW + x(task.start);
-          g.append('rect')
+          bg.append('rect')
             .attr('x', mx - 6).attr('y', ty - 6)
             .attr('width', 12).attr('height', 12)
             .attr('transform', `rotate(45,${mx},${ty})`)
@@ -343,8 +352,7 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
             .style('cursor', 'pointer')
             .on('mouseenter', (event: MouseEvent) => showTip(event))
             .on('mouseleave', hideTip);
-          // Milestone label
-          g.append('text')
+          bg.append('text')
             .attr('x', mx + 12).attr('y', ty)
             .attr('dominant-baseline', 'central')
             .attr('fill', barColor).attr('font-size', '9.5px').attr('font-weight', '600')
@@ -354,10 +362,9 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
             .on('mouseenter', (event: MouseEvent) => showTip(event))
             .on('mouseleave', hideTip);
         } else {
-          // Bar
           const bx = labelW + x(task.start);
           const bw = Math.max(labelW + x(task.end) - bx, 16);
-          g.append('rect')
+          bg.append('rect')
             .attr('x', bx).attr('y', ty - 10)
             .attr('width', bw).attr('height', 20)
             .attr('rx', 4)
@@ -366,12 +373,11 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
             .style('cursor', 'pointer')
             .on('mouseenter', (event: MouseEvent) => showTip(event))
             .on('mouseleave', hideTip);
-          // Bar label
           const maxLabelLen = Math.floor(bw / 7);
           const label = task.name.length > maxLabelLen
             ? task.name.slice(0, maxLabelLen - 1) + '\u2026'
             : task.name;
-          g.append('text')
+          bg.append('text')
             .attr('x', bx + 6).attr('y', ty)
             .attr('dominant-baseline', 'central')
             .attr('fill', '#2a2520').attr('font-size', '10px').attr('font-weight', '600')
@@ -382,16 +388,27 @@ export function SwimGanttView({ treeData }: SwimGanttViewProps) {
       });
     });
 
-    // Click outside to dismiss tooltip (for lane label click-to-show)
-    svg.on('click', () => setTooltip(prev => ({ ...prev, visible: false })));
+    /* ── Today line overlay (drawn last so it's on top of everything) ── */
+    bg.append('line')
+      .attr('x1', todayX).attr('x2', todayX)
+      .attr('y1', 0).attr('y2', totalH)
+      .attr('stroke', '#bf3636').attr('stroke-width', 1.5).attr('stroke-dasharray', '6,4')
+      .style('pointer-events', 'none');
 
-    return () => { el.innerHTML = ''; };
+    // Click outside to dismiss tooltip
+    bSvg.on('click', () => setTooltip(prev => ({ ...prev, visible: false })));
+
+    return () => {
+      headerRef.current && (headerRef.current.innerHTML = '');
+      bodyRef.current && (bodyRef.current.innerHTML = '');
+    };
   }, [filteredTree]);
 
   return (
     <div className="gantt-view">
       <div className="gantt-wrap">
-        <div ref={containerRef} />
+        <div className="gantt-header" ref={headerRef} />
+        <div className="gantt-body" ref={bodyRef} />
         <div
           className={`tooltip${tooltip.visible ? ' visible' : ''}`}
           style={{ left: tooltip.x, top: tooltip.y, pointerEvents: tooltip.visible ? 'auto' : 'none' }}
