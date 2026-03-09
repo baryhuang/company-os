@@ -156,7 +156,12 @@ jobs:
                 {"name": "S3_BUCKET", "value": "${{ secrets.S3_BUCKET }}"},
                 {"name": "BOT_NAME", "value": "${{ secrets.BOT_NAME }}"},
                 {"name": "TELEGRAM_API_SERVER", "value": "http://localhost:8081"},
-                {"name": "CORS_ORIGINS", "value": "${{ secrets.CORS_ORIGINS }}"}
+                {"name": "CORS_ORIGINS", "value": "${{ secrets.CORS_ORIGINS }}"},
+                {"name": "BUBBLELAB_WEBHOOK_URL", "value": "${{ secrets.BUBBLELAB_WEBHOOK_URL }}"},
+                {"name": "S3_URL", "value": "${{ secrets.S3_URL }}"},
+                {"name": "S3_ACCESS_KEY_ID", "value": "${{ secrets.S3_ACCESS_KEY_ID }}"},
+                {"name": "S3_SECRET_ACCESS_KEY", "value": "${{ secrets.S3_SECRET_ACCESS_KEY }}"},
+                {"name": "GOOGLE_DRIVE_FOLDER_ID", "value": "${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}"}
               ],
               "logConfiguration": {
                 "logDriver": "awslogs",
