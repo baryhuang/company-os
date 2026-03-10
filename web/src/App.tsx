@@ -8,18 +8,20 @@ import { OverviewView } from './components/OverviewView';
 import { CompetitorView } from './components/CompetitorView';
 import { TaskSearchView } from './components/TaskSearchView';
 import { SwimGanttView } from './components/SwimGanttView';
+import { AppointmentsView } from './components/AppointmentsView';
 import type { ViewType } from './types';
 
 function AuthenticatedApp() {
   const { user } = useUser();
   const userId = user!.id;
-  const { dimensions, dimensionsData, landscapeData, progressData, loading, error } = useAtlasData(userId);
+  const { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, loading, error } = useAtlasData(userId);
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [currentDimIndex, setCurrentDimIndex] = useState(0);
   const [expandLevel, setExpandLevel] = useState(-1);
   const [fitRequest, setFitRequest] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('gantt');
+  const [peopleTab, setPeopleTab] = useState<'tree' | 'meetings'>('tree');
 
   const handleSwitch = useCallback((view: ViewType, dimIndex?: number) => {
     setCurrentView(view);
@@ -86,12 +88,20 @@ function AuthenticatedApp() {
             <>
               {dimensions[currentDimIndex].id === 'build' && (
                 <div className="view-tabs">
-                  <button className={`tab-btn${buildTab === 'tree' ? ' active' : ''}`} onClick={() => setBuildTab('tree')}>Decision Tree</button>
+                  <button className={`tab-btn${buildTab === 'tree' ? ' active' : ''}`} onClick={() => setBuildTab('tree')}>Build Status</button>
                   <button className={`tab-btn${buildTab === 'gantt' ? ' active' : ''}`} onClick={() => setBuildTab('gantt')}>Timeline</button>
+                </div>
+              )}
+              {dimensions[currentDimIndex].id === 'people-network' && (
+                <div className="view-tabs">
+                  <button className={`tab-btn${peopleTab === 'tree' ? ' active' : ''}`} onClick={() => setPeopleTab('tree')}>Relationship Map</button>
+                  <button className={`tab-btn${peopleTab === 'meetings' ? ' active' : ''}`} onClick={() => setPeopleTab('meetings')}>Meetings</button>
                 </div>
               )}
               {buildTab === 'gantt' && dimensions[currentDimIndex].id === 'build'
                 ? <SwimGanttView treeData={progressData || dimensionsData[dimensions[currentDimIndex].id]} />
+                : peopleTab === 'meetings' && dimensions[currentDimIndex].id === 'people-network' && appointmentsData
+                ? <AppointmentsView data={appointmentsData} />
                 : <MarkmapDimensionView
                     treeData={dimensionsData[dimensions[currentDimIndex].id]}
                     expandLevel={expandLevel}

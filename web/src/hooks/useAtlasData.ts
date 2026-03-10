@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { fetchDimensions, fetchDimensionData, fetchProgressData, fetchLandscapeData, initializeUserData } from '../api';
-import type { DimensionMeta, TreeNode, LandscapeData } from '../types';
+import { fetchDimensions, fetchDimensionData, fetchProgressData, fetchLandscapeData, fetchAppointmentsData, initializeUserData } from '../api';
+import type { DimensionMeta, TreeNode, LandscapeData, AppointmentsData } from '../types';
 
 interface AtlasData {
   dimensions: DimensionMeta[];
   dimensionsData: Record<string, TreeNode>;
   landscapeData: LandscapeData | null;
   progressData: TreeNode | null;
+  appointmentsData: AppointmentsData | null;
   loading: boolean;
   error: string | null;
 }
@@ -16,6 +17,7 @@ export function useAtlasData(userId: string): AtlasData {
   const [dimensionsData, setDimensionsData] = useState<Record<string, TreeNode>>({});
   const [landscapeData, setLandscapeData] = useState<LandscapeData | null>(null);
   const [progressData, setProgressData] = useState<TreeNode | null>(null);
+  const [appointmentsData, setAppointmentsData] = useState<AppointmentsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +36,7 @@ export function useAtlasData(userId: string): AtlasData {
         }),
         fetchLandscapeData(userId).then(data => ({ id: '__landscape__', data })).catch(() => ({ id: '__landscape__', data: null })),
         fetchProgressData(userId).then(data => ({ id: '__progress__', data })),
+        fetchAppointmentsData(userId).then(data => ({ id: '__appointments__', data })).catch(() => ({ id: '__appointments__', data: null })),
       ]);
 
       if (cancelled) return;
@@ -44,6 +47,8 @@ export function useAtlasData(userId: string): AtlasData {
           setLandscapeData(r.data as LandscapeData);
         } else if (r.id === '__progress__') {
           setProgressData(r.data as TreeNode);
+        } else if (r.id === '__appointments__') {
+          setAppointmentsData(r.data as AppointmentsData);
         } else {
           dataMap[r.id] = r.data as TreeNode;
         }
@@ -75,5 +80,5 @@ export function useAtlasData(userId: string): AtlasData {
     return () => { cancelled = true; };
   }, [userId]);
 
-  return { dimensions, dimensionsData, landscapeData, progressData, loading, error };
+  return { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, loading, error };
 }

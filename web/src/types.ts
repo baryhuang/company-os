@@ -115,4 +115,35 @@ export interface AIQueryResult {
   summary?: string;
 }
 
+export interface Appointment {
+  id: string;
+  person: string;
+  what: string;
+  type: string;
+  date: string | null;
+  date_precision: string;
+  date_end?: string;
+  time: string | null;
+  location: string | null;
+  format: string;
+  owner: string;
+  participants: string[];
+  depends_on: string[];
+  followup_action: string;
+  remind_date: string | null;
+  priority: string;
+  status: string;
+  source_date: string;
+  quote: string;
+  urgency: 'overdue' | 'this_week' | 'next_week' | 'upcoming' | 'no_date' | 'done';
+}
+
+export interface AppointmentsData {
+  name: string;
+  generated: string;
+  total: number;
+  summary: Record<string, number>;
+  appointments: Appointment[];
+}
+
 export type ViewType = 'overview' | 'd3' | 'competitor' | 'tasks';

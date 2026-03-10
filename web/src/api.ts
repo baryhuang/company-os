@@ -1,4 +1,4 @@
-import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow, LinearTask, AIQueryResult } from './types';
+import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow, LinearTask, AIQueryResult, AppointmentsData } from './types';
 import { insforge } from './insforge';
 import { assembleTree } from './assembleTree';
 
@@ -167,6 +167,11 @@ export async function fetchCompetitorData(userId: string): Promise<CompetitorDat
 export async function fetchProgressData(userId: string): Promise<TreeNode> {
   if (isDev) return fetchLocalJson<TreeNode>('progress.json');
   return dbSelect<TreeNode>(userId, 'progress');
+}
+
+export async function fetchAppointmentsData(userId: string): Promise<AppointmentsData> {
+  if (isDev) return fetchLocalJson<AppointmentsData>('appointments-glance.json');
+  return dbSelect<AppointmentsData>(userId, 'appointments-glance');
 }
 
 const COMP_TABLE = 'atlas_competitors';
