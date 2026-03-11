@@ -74,7 +74,7 @@ async function syncDocuments(keys: string[]): Promise<number> {
 
   // Upsert each document using POST with merge-duplicates
   for (const row of rows) {
-    const postResp = await restFetch('atlas_documents', {
+    const postResp = await restFetch('atlas_documents?on_conflict=user_id,doc_key', {
       method: 'POST',
       headers: { 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify([row]),
