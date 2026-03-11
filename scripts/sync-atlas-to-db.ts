@@ -24,7 +24,7 @@ const BASE_URL = process.env.INSFORGE_BASE_URL || 'https://gx2m4dge.us-east.insf
 const USER_ID = '__default__';
 
 // These are stored as JSONB blobs in atlas_documents, not as flat nodes
-const DOC_KEYS = new Set(['dimensions', 'competitor', 'progress', 'landscape']);
+const DOC_KEYS = new Set(['dimensions', 'competitor', 'progress', 'landscape', 'appointments-glance']);
 
 if (!API_KEY) {
   console.error('Set INSFORGE_API_KEY env var');

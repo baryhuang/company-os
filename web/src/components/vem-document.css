@@ -38,12 +38,21 @@
   margin-bottom: 36px;
 }
 
+/* Section block */
+.vem-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px 28px;
+  margin-bottom: 20px;
+}
+
 /* Section headings */
 .vem-doc-inner h2 {
   font-family: var(--font-display);
   font-size: 20px; font-weight: 400;
   color: var(--text);
-  margin: 36px 0 4px;
+  margin: 0 0 4px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
@@ -100,9 +109,3 @@
   margin-left: 4px;
 }
 
-/* Divider between sections */
-.vem-divider {
-  border: none;
-  border-top: 1px dashed var(--border2);
-  margin: 32px 0;
-}
