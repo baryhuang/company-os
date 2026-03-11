@@ -30,7 +30,7 @@ export function useAtlasData(userId: string): AtlasData {
       setDimensions(dims);
 
       const results = await Promise.all([
-        ...dims.map(async (d) => {
+        ...dims.filter(d => d.file).map(async (d) => {
           const data = await fetchDimensionData(userId, d.id);
           return { id: d.id, data };
         }),
