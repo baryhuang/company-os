@@ -161,7 +161,8 @@ jobs:
                 {"name": "S3_URL", "value": "${{ secrets.S3_URL }}"},
                 {"name": "S3_ACCESS_KEY_ID", "value": "${{ secrets.S3_ACCESS_KEY_ID }}"},
                 {"name": "S3_SECRET_ACCESS_KEY", "value": "${{ secrets.S3_SECRET_ACCESS_KEY }}"},
-                {"name": "GOOGLE_DRIVE_FOLDER_ID", "value": "${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}"}
+                {"name": "GOOGLE_DRIVE_FOLDER_ID", "value": "${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}"},
+                {"name": "OPENROUTER_API_KEY", "value": "${{ secrets.OPENROUTER_API_KEY }}"}
               ],
               "logConfiguration": {
                 "logDriver": "awslogs",

@@ -494,7 +494,7 @@ def main():
         """Run OCR on a single image via OpenRouter vision model."""
         client = _get_openrouter_ai_client()
         if not client:
-            return "(OpenRouter not configured — OCR unavailable)"
+            raise RuntimeError("OpenRouter not configured (OPENROUTER_API_KEY missing) — OCR unavailable")
 
         model = os.getenv('OPENROUTER_MODEL', 'google/gemini-2.5-flash-lite')
         b64 = base64.b64encode(file_bytes).decode('ascii')
@@ -503,22 +503,18 @@ def main():
         if page_label:
             prompt = f"[Page {page_label}] " + prompt
 
-        try:
-            resp = client.chat.completions.create(
-                model=model,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-                    ],
-                }],
-                max_tokens=4096,
-            )
-            return resp.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"OCR failed: {e}")
-            return f"(OCR error: {str(e)[:200]})"
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
+                ],
+            }],
+            max_tokens=4096,
+        )
+        return resp.choices[0].message.content or ""
 
     async def _merge_ocr_pages(pages: list[str]) -> str:
         """Use AI to merge multi-page OCR results into a clean document."""
