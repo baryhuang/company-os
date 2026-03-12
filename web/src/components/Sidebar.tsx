@@ -57,8 +57,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
   return (
     <aside className={`sidebar${open ? ' open' : ''}`}>
       <div className="sidebar-header">
-        <div className="logo">{'\u2764\uFE0F'} CareMojo</div>
-        <h2>Decision Atlas</h2>
+        <h2 className="logo">{'\u{1F9E0}'} Company Brain</h2>
         {workspaceName && <div className="sub">{workspaceName}</div>}
         <div className="sub">Feb 23 {'\u2013'} Mar 11, 2026</div>
       </div>

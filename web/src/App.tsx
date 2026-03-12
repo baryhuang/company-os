@@ -51,7 +51,7 @@ function AuthenticatedApp() {
   }
 
   if (loading) {
-    return <div className="loading-screen">Loading your Decision Atlas...</div>;
+    return <div className="loading-screen">Loading your Company Brain...</div>;
   }
 
   if (error) {
@@ -158,7 +158,7 @@ export default function App() {
     <>
       <SignedOut>
         <div className="login-screen">
-          <h1>Decision Atlas</h1>
+          <h1>Company Brain</h1>
           <p>Sign in to explore your strategic decisions</p>
           <SignInButton />
         </div>

@@ -9,7 +9,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel }: TopBarProps) {
-  let title = 'CareMojo Decision Atlas';
+  let title = 'Company Brain';
   let desc = '8 dimensions + competitive evolution';
 
   if (currentView === 'overview') {

@@ -79,9 +79,9 @@ function SlideCover() {
   return (
     <div className="title-slide-content">
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand)', marginBottom: 16 }}>{'\u2764\uFE0F'} Care Mojo</div>
-        <h1><span className="brand">CareMojo</span> Vision &amp;<br />Roadmap Evolution</h1>
-        <p className="subtitle" style={{ maxWidth: 560, margin: '16px auto 0' }}>Feb 23 {'\u2013'} Mar 5, 2026 {'\u00b7'} 8 Decision Dimensions {'\u00b7'} From PeakMojo to CareMojo in 10 Days</p>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand)', marginBottom: 16 }}>{'\u2764\uFE0F'} Company Brain</div>
+        <h1><span className="brand">Company Brain</span> Vision &amp;<br />Roadmap Evolution</h1>
+        <p className="subtitle" style={{ maxWidth: 560, margin: '16px auto 0' }}>Feb 23 {'\u2013'} Mar 5, 2026 {'\u00b7'} 8 Decision Dimensions {'\u00b7'} 10-Day Strategic Sprint</p>
       </div>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 28 }}>
         <StatCard num="8" label="Dimensions" />
@@ -270,14 +270,14 @@ function SlideOrg() {
       </div>
       <div className="grid3">
         <div className="card accent">
-          <h3 style={{ color: 'var(--teal)' }}>PeakMojo INC</h3>
+          <h3 style={{ color: 'var(--teal)' }}>Parent Company</h3>
           <span className="badge blue" style={{ marginBottom: 8, display: 'inline-block' }}>For-profit {'\u00b7'} Fundraising entity</span>
           <p>AI Training System<br />LMS Platform<br />Scenario Library<br />IP & Data Assets</p>
         </div>
         <div className="card green">
-          <h3 style={{ color: 'var(--green)' }}>{'\u2764\uFE0F'} CareMojo</h3>
+          <h3 style={{ color: 'var(--green)' }}>{'\u2764\uFE0F'} Company Brain</h3>
           <span className="badge green" style={{ marginBottom: 8, display: 'inline-block' }}>Brand</span>
-          <p>Healthcare market brand<br />Rebranded from PeakMojo<br />Care Provider positioning carrier</p>
+          <p>Healthcare market brand<br />Healthcare rebrand<br />Care Provider positioning carrier</p>
         </div>
         <div className="card purple">
           <h3 style={{ color: 'var(--purple)' }}>MojoAcademy</h3>
@@ -398,7 +398,7 @@ function SlidePitch() {
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 8 }}>FINAL ELEVATOR PITCH</div>
           <div className="pitch-hook"><span style={{ fontSize: 10, opacity: 0.6 }}>HOOK</span><br />If we live long enough, most of us will need care one day.</div>
           <div className="pitch-problem"><span style={{ fontSize: 10, opacity: 0.6 }}>PROBLEM</span><br />As America ages, we need millions more caregivers. Yet turnover exceeds 50% {'\u2014'} and nearly 70% of skills are learned on the job.</div>
-          <div className="pitch-product"><span style={{ fontSize: 10, opacity: 0.6 }}>PRODUCT</span><br />Care Mojo is building AI experiential training that simulates real patients, so caregivers can learn by doing and be ready before touching any real patients.</div>
+          <div className="pitch-product"><span style={{ fontSize: 10, opacity: 0.6 }}>PRODUCT</span><br />Company Brain is building AI experiential training that simulates real patients, so caregivers can learn by doing and be ready before touching any real patients.</div>
           <div className="pitch-traction"><span style={{ fontSize: 10, opacity: 0.6 }}>TRACTION</span><br />We&rsquo;re launching our first training cohort in Washington with Kline Galland and UCSF Nursing, and this is only the beginning.</div>
           <div className="pitch-vision"><span style={{ fontSize: 10, opacity: 0.6 }}>VISION</span><br />The future of care is a fellowship of humans, AI, and robotics {'\u2014'} working together to care for an aging world.</div>
         </div>
@@ -499,14 +499,14 @@ function SlideCompetitor() {
 function SlideVision() {
   return (
     <div className="title-slide-content" style={{ background: 'linear-gradient(160deg, #e8f2e0 0%, #eef5e8 30%, #f2f0ea 60%, #e8f0e2 100%)' }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)', marginBottom: 12 }}>{'\u2764\uFE0F'} Care Mojo</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand)', marginBottom: 12 }}>{'\u2764\uFE0F'} Company Brain</div>
       <h1 style={{ fontSize: 28, maxWidth: 740, lineHeight: 1.45 }}>
         Expand global caregiving capacity today and become the operating system of the care workforce tomorrow
       </h1>
       <div style={{ marginTop: 28, maxWidth: 600, textAlign: 'left' as const }}>
         <div className="pitch-hook" style={{ margin: '4px 0' }}>If we live long enough, most of us will need care one day.</div>
         <div className="pitch-problem" style={{ margin: '4px 0' }}>As America ages, we need millions more caregivers. Yet turnover exceeds 50% {'\u2014'} and nearly 70% of skills are learned on the job.</div>
-        <div className="pitch-product" style={{ margin: '4px 0' }}>Care Mojo is building AI experiential training that simulates real patients, so caregivers can learn by doing.</div>
+        <div className="pitch-product" style={{ margin: '4px 0' }}>Company Brain is building AI experiential training that simulates real patients, so caregivers can learn by doing.</div>
         <div className="pitch-traction" style={{ margin: '4px 0' }}>Launching first cohort in Washington with Kline Galland and UCSF Nursing.</div>
         <div className="pitch-vision" style={{ margin: '4px 0' }}><strong>The future of care is a fellowship of humans, AI, and robotics {'\u2014'} working together to care for an aging world.</strong></div>
       </div>
@@ -516,7 +516,7 @@ function SlideVision() {
         <StatCard num="6,000+" label="scenarios" />
         <StatCard num="3" label="phases" />
       </div>
-      <div style={{ marginTop: 20, fontSize: 11, color: 'var(--text3)' }}>Feb 23 {'\u2013'} Mar 5, 2026 {'\u00b7'} CareMojo Executive Report</div>
+      <div style={{ marginTop: 20, fontSize: 11, color: 'var(--text3)' }}>Feb 23 {'\u2013'} Mar 5, 2026 {'\u00b7'} Company Brain Executive Report</div>
     </div>
   );
 }
