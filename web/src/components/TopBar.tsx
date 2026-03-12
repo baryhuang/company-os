@@ -26,7 +26,7 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
     title = '竞争格局';
     desc = '竞争对手全景分析';
   } else if (currentView === 'tasks') {
-    title = 'Task Search';
+    title = 'Tasks';
     desc = 'Semantic search across Linear tasks';
   } else if (currentView === 'settings') {
     title = 'Settings';
