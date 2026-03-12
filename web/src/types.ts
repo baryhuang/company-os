@@ -147,4 +147,4 @@ export interface AppointmentsData {
   appointments: Appointment[];
 }
 
-export type ViewType = 'overview' | 'd3' | 'competitor' | 'tasks' | 'vem';
+export type ViewType = 'overview' | 'd3' | 'competitor' | 'tasks' | 'vem' | 'partners';

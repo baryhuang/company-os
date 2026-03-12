@@ -10,6 +10,7 @@ import { TaskSearchView } from './components/TaskSearchView';
 import { SwimGanttView } from './components/SwimGanttView';
 import { AppointmentsView } from './components/AppointmentsView';
 import { VEMDocumentView } from './components/VEMDocumentView';
+import { PartnersView } from './components/PartnersView';
 import type { ViewType } from './types';
 
 function AuthenticatedApp() {
@@ -118,6 +119,10 @@ function AuthenticatedApp() {
 
           {currentView === 'competitor' && landscapeData && (
             <CompetitorView data={landscapeData} />
+          )}
+
+          {currentView === 'partners' && dimensionsData['strategic-partners'] && (
+            <PartnersView treeData={dimensionsData['strategic-partners']} />
           )}
 
           {currentView === 'tasks' && (

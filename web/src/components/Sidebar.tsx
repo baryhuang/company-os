@@ -90,6 +90,18 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
                   </div>
                 );
               }
+              if (dim.id === 'strategic-partners') {
+                return (
+                  <div
+                    key={dim.id}
+                    className={`nav-item${currentView === 'partners' ? ' active' : ''}`}
+                    onClick={() => handleClick('partners')}
+                  >
+                    <span className="icon">{dim.icon}</span>
+                    {dim.title}
+                  </div>
+                );
+              }
               if (dim.id === 'task_search') {
                 return (
                   <div
