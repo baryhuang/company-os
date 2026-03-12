@@ -2,19 +2,10 @@ import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeM
 import { insforge } from './insforge';
 import { assembleTree } from './assembleTree';
 
-const isDev = false; // force DB mode to debug data mismatches
 const DOC_TABLE = 'atlas_documents';
 const NODE_TABLE = 'atlas_nodes';
 
-// ── Local file helpers (dev mode) ──────────────────────────────────
-
-async function fetchLocalJson<T>(filename: string): Promise<T> {
-  const resp = await fetch(`/data/${filename}`);
-  if (!resp.ok) throw new Error(`Local fetch failed: /data/${filename}`);
-  return resp.json() as Promise<T>;
-}
-
-// ── Database helpers (production) ──────────────────────────────────
+// ── Database helpers ──────────────────────────────────────────────
 
 async function dbSelect<T>(userId: string, docKey: string): Promise<T> {
   // Try user-specific row first, fall back to __default__
@@ -75,8 +66,6 @@ async function dbSelectNodes(userId: string, dimension: string): Promise<TreeNod
 // ── Public API ─────────────────────────────────────────────────────
 
 export async function initializeUserData(userId: string): Promise<void> {
-  if (isDev) return; // local files need no init
-
   // Check if user already has documents — skip if so (idempotent)
   const { data: existing } = await insforge.database
     .from(DOC_TABLE)
@@ -150,64 +139,30 @@ export async function initializeUserData(userId: string): Promise<void> {
 }
 
 export async function fetchDimensions(_userId: string): Promise<DimensionMeta[]> {
-  if (isDev) return fetchLocalJson<DimensionMeta[]>('dimensions.json');
   // Always read from __default__ — dimensions are global config, not per-user data
   return dbSelect<DimensionMeta[]>('__default__', 'dimensions');
 }
 
 export async function fetchDimensionData(userId: string, name: string): Promise<TreeNode> {
-  if (isDev) return fetchLocalJson<TreeNode>(`${name}.json`);
   return dbSelectNodes(userId, name);
 }
 
 export async function fetchCompetitorData(userId: string): Promise<CompetitorData> {
-  if (isDev) return fetchLocalJson<CompetitorData>('competitor.json');
   return dbSelect<CompetitorData>(userId, 'competitor');
 }
 
 export async function fetchProgressData(userId: string): Promise<TreeNode> {
-  if (isDev) return fetchLocalJson<TreeNode>('progress.json');
   return dbSelect<TreeNode>(userId, 'progress');
 }
 
 export async function fetchAppointmentsData(userId: string): Promise<AppointmentsData> {
-  if (isDev) return fetchLocalJson<AppointmentsData>('appointments-glance.json');
   return dbSelect<AppointmentsData>(userId, 'appointments-glance');
 }
 
 const COMP_TABLE = 'atlas_competitors';
 
 export async function fetchLandscapeData(userId: string): Promise<LandscapeData> {
-  if (isDev) {
-    // In dev, build from landscape.json
-    const raw = await fetchLocalJson<{
-      title: string; subtitle: string; last_update?: string;
-      our_position: string; white_space: string;
-      categories: { name: string; best_owner?: string; companies?: CompetitorRow[]; subcategories?: { name: string; companies: CompetitorRow[] }[] }[];
-    }>('landscape.json');
-    const competitors: CompetitorRow[] = [];
-    let sortOrder = 0;
-    for (const cat of raw.categories) {
-      if (cat.companies) {
-        for (const c of cat.companies) {
-          competitors.push({ ...c, section: cat.name, best_owner: cat.best_owner, sort_order: sortOrder++ });
-        }
-      }
-      if (cat.subcategories) {
-        for (const sub of cat.subcategories) {
-          for (const c of sub.companies) {
-            competitors.push({ ...c, section: cat.name, best_owner: cat.best_owner, subcategory: sub.name, sort_order: sortOrder++ });
-          }
-        }
-      }
-    }
-    return {
-      meta: { title: raw.title, subtitle: raw.subtitle, last_update: raw.last_update, our_position: raw.our_position, white_space: raw.white_space },
-      competitors,
-    };
-  }
-
-  // Production: fetch metadata doc + competitor rows in parallel
+  // Fetch metadata doc + competitor rows in parallel
   const [meta, competitors] = await Promise.all([
     dbSelect<LandscapeMeta>(userId, 'landscape'),
     fetchCompetitorRows(userId),
