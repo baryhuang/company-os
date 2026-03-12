@@ -25,6 +25,9 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
   } else if (currentView === 'tasks') {
     title = 'Task Search';
     desc = 'Semantic search across Linear tasks';
+  } else if (currentView === 'settings') {
+    title = 'Settings';
+    desc = 'Workspace sharing & configuration';
   }
 
   const showButtons = currentView === 'd3';

@@ -1,4 +1,4 @@
-import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow, LinearTask, AIQueryResult, AppointmentsData } from './types';
+import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeMeta, CompetitorRow, LinearTask, AIQueryResult, AppointmentsData, WorkspaceMember } from './types';
 import { insforge } from './insforge';
 import { assembleTree } from './assembleTree';
 
@@ -340,4 +340,56 @@ async function fetchCompetitorRows(userId: string): Promise<CompetitorRow[]> {
     throw new Error(`DB fetch failed [competitors]: ${fbError?.message ?? 'no data'}`);
   }
   return mapCompetitorRows(fallback);
+}
+
+// ── Workspace sharing ─────────────────────────────────────────────
+
+const WORKSPACE_TABLE = 'workspace_members';
+
+export async function fetchUserWorkspaces(email: string): Promise<WorkspaceMember[]> {
+  const { data, error } = await insforge.database
+    .from(WORKSPACE_TABLE)
+    .select('*')
+    .eq('member_email', email.toLowerCase());
+
+  if (error) throw new Error(`Failed to fetch workspaces: ${error.message}`);
+  return (data ?? []) as WorkspaceMember[];
+}
+
+export async function fetchWorkspaceMembers(ownerId: string): Promise<WorkspaceMember[]> {
+  const { data, error } = await insforge.database
+    .from(WORKSPACE_TABLE)
+    .select('*')
+    .eq('owner_id', ownerId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`Failed to fetch members: ${error.message}`);
+  return (data ?? []) as WorkspaceMember[];
+}
+
+export async function addWorkspaceMember(ownerId: string, workspaceName: string, email: string): Promise<void> {
+  const { error } = await insforge.database
+    .from(WORKSPACE_TABLE)
+    .insert({ owner_id: ownerId, workspace_name: workspaceName, member_email: email.toLowerCase() });
+
+  if (error) throw new Error(`Failed to add member: ${error.message}`);
+}
+
+export async function removeWorkspaceMember(ownerId: string, email: string): Promise<void> {
+  const { error } = await insforge.database
+    .from(WORKSPACE_TABLE)
+    .delete()
+    .eq('owner_id', ownerId)
+    .eq('member_email', email.toLowerCase());
+
+  if (error) throw new Error(`Failed to remove member: ${error.message}`);
+}
+
+export async function updateWorkspaceName(ownerId: string, newName: string): Promise<void> {
+  const { error } = await insforge.database
+    .from(WORKSPACE_TABLE)
+    .update({ workspace_name: newName })
+    .eq('owner_id', ownerId);
+
+  if (error) throw new Error(`Failed to update workspace name: ${error.message}`);
 }

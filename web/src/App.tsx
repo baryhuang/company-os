@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from '@insforge/react';
 import { useAtlasData } from './hooks/useAtlasData';
+import { useWorkspace } from './hooks/useWorkspace';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { MarkmapDimensionView } from './components/MarkmapView';
@@ -11,22 +12,14 @@ import { SwimGanttView } from './components/SwimGanttView';
 import { AppointmentsView } from './components/AppointmentsView';
 import { VEMDocumentView } from './components/VEMDocumentView';
 import { PartnersView } from './components/PartnersView';
+import { WorkspacePicker } from './components/WorkspacePicker';
+import { SettingsView } from './components/SettingsView';
 import type { ViewType } from './types';
-
-// All peakmojo.com / peakmojo.ai users share the same data workspace
-const PEAKMOJO_USER_ID = '586de5aa-b322-4236-8480-7f5d4ce9c39c';
-
-function getDataUserId(user: { id: string; email?: string }): string {
-  const email = user.email?.toLowerCase() ?? '';
-  if (email.endsWith('@peakmojo.com') || email.endsWith('@peakmojo.ai')) {
-    return PEAKMOJO_USER_ID;
-  }
-  return user.id;
-}
 
 function AuthenticatedApp() {
   const { user } = useUser();
-  const userId = getDataUserId(user!);
+  const { workspace, workspaces, loading: wsLoading, needsPicker, selectWorkspace } = useWorkspace(user ?? null);
+  const userId = workspace?.ownerId ?? user!.id;
   const { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, loading, error } = useAtlasData(userId);
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [currentDimIndex, setCurrentDimIndex] = useState(0);
@@ -48,6 +41,14 @@ function AuthenticatedApp() {
       setExpandLevel(level);
     }
   }, []);
+
+  if (wsLoading) {
+    return <div className="loading-screen">Loading workspaces...</div>;
+  }
+
+  if (needsPicker) {
+    return <WorkspacePicker workspaces={workspaces} onSelect={selectWorkspace} />;
+  }
 
   if (loading) {
     return <div className="loading-screen">Loading your Decision Atlas...</div>;
@@ -79,6 +80,7 @@ function AuthenticatedApp() {
           onSwitch={handleSwitch}
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          workspaceName={workspace?.name}
         />
         <div className="main">
           <TopBar
@@ -138,6 +140,14 @@ function AuthenticatedApp() {
 
           {currentView === 'tasks' && (
             <TaskSearchView />
+          )}
+
+          {currentView === 'settings' && workspace && (
+            <SettingsView
+              workspace={workspace}
+              workspaces={workspaces}
+              onSelectWorkspace={selectWorkspace}
+            />
           )}
 
         </div>

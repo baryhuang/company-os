@@ -147,4 +147,17 @@ export interface AppointmentsData {
   appointments: Appointment[];
 }
 
-export type ViewType = 'overview' | 'd3' | 'competitor' | 'tasks' | 'vem' | 'partners';
+export type ViewType = 'overview' | 'd3' | 'competitor' | 'tasks' | 'vem' | 'partners' | 'settings';
+
+export interface WorkspaceMember {
+  owner_id: string;
+  workspace_name: string;
+  member_email: string;
+  created_at: string;
+}
+
+export interface Workspace {
+  ownerId: string;
+  name: string;
+  isOwner: boolean;
+}

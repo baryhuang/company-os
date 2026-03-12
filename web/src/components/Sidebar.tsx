@@ -8,6 +8,7 @@ interface SidebarProps {
   onSwitch: (view: ViewType, dimIndex?: number) => void;
   open: boolean;
   onClose: () => void;
+  workspaceName?: string;
 }
 
 const GROUP_LABELS: Record<string, string> = {
@@ -20,7 +21,7 @@ const GROUP_LABELS: Record<string, string> = {
 
 const GROUP_ORDER = ['strategy', 'gtm', 'build', 'org', 'execution'];
 
-export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, open, onClose }: SidebarProps) {
+export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, open, onClose, workspaceName }: SidebarProps) {
   const handleClick = (view: ViewType, dimIndex?: number) => {
     onSwitch(view, dimIndex);
     onClose();
@@ -56,6 +57,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
       <div className="sidebar-header">
         <div className="logo">{'\u2764\uFE0F'} CareMojo</div>
         <h2>Decision Atlas</h2>
+        {workspaceName && <div className="sub">{workspaceName}</div>}
         <div className="sub">Feb 23 {'\u2013'} Mar 11, 2026</div>
       </div>
 
@@ -127,6 +129,15 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
             })}
           </div>
         ))}
+      </div>
+
+      <div className="sidebar-settings">
+        <div
+          className={`nav-item${currentView === 'settings' ? ' active' : ''}`}
+          onClick={() => handleClick('settings')}
+        >
+          <span className="icon">{'\u2699\uFE0F'}</span>Settings
+        </div>
       </div>
 
       <div className="sidebar-legend">
