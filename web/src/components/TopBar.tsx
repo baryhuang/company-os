@@ -19,6 +19,9 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
     const dim = dimensions[currentDimIndex];
     title = dim.title;
     desc = dim.desc;
+  } else if (currentView === 'vem') {
+    title = 'Vision to Execution';
+    desc = 'Strategic vision mapped to execution milestones';
   } else if (currentView === 'competitor') {
     title = '竞争格局';
     desc = '竞争对手全景分析';

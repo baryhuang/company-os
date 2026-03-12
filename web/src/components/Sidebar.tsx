@@ -80,6 +80,8 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
           <div key={group}>
             <div className="nav-section">{label}</div>
             {items.map(({ dim, index }) => {
+              // Skip — already shown as doc view above
+              if (dim.id === 'vision_execution_map') return null;
               // Special views that aren't tree dimensions
               if (dim.id === 'competitor') {
                 return (
