@@ -24,7 +24,7 @@ const BASE_URL = process.env.INSFORGE_BASE_URL || 'https://gx2m4dge.us-east.insf
 const USER_ID = '__default__';
 
 // These are stored as JSONB blobs in atlas_documents, not as flat nodes
-const DOC_KEYS = new Set(['dimensions', 'progress', 'landscape', 'appointments-glance']);
+const DOC_KEYS = new Set(['dimensions', 'landscape', 'appointments-glance']);
 
 if (!API_KEY) {
   console.error('Set INSFORGE_API_KEY env var');
@@ -87,6 +87,113 @@ async function syncDocuments(keys: string[]): Promise<number> {
   }
   console.log(`  Synced ${docKeys.length} document(s): ${docKeys.join(', ')}`);
   return docKeys.length;
+}
+
+// ── Competitor rows sync (landscape.json → atlas_competitors) ──────
+
+interface LandscapeCategory {
+  name: string;
+  best_owner?: string;
+  companies?: Record<string, unknown>[];
+  subcategories?: { name: string; companies: Record<string, unknown>[] }[];
+}
+
+async function syncCompetitorRows(keys: string[]): Promise<number> {
+  if (!keys.includes('landscape')) return 0;
+
+  const file = join(DATA_DIR, 'landscape.json');
+  const raw = JSON.parse(readFileSync(file, 'utf-8')) as { categories: LandscapeCategory[] };
+  if (!raw.categories) return 0;
+
+  // Flatten categories → competitor rows
+  const rows: Record<string, unknown>[] = [];
+  let sortOrder = 0;
+  for (const cat of raw.categories) {
+    if (cat.companies) {
+      for (const c of cat.companies) {
+        rows.push({
+          user_id: USER_ID,
+          section: cat.name,
+          best_owner: cat.best_owner || null,
+          subcategory: null,
+          name: c.name,
+          website: c.website || null,
+          category: c.category || null,
+          primary_focus: c.primary_focus || null,
+          target_customer: c.target_customer || null,
+          pricing_model: c.pricing_model || null,
+          price_range: c.price_range || null,
+          funding: c.funding || null,
+          serves_cna: c.serves_cna || false,
+          serves_rn: c.serves_rn || false,
+          uses_ai: c.uses_ai || false,
+          key_differentiator: c.key_differentiator || null,
+          relevance: c.relevance || null,
+          threat: c.threat || 'low',
+          transcript_quotes: c.transcript_quotes || null,
+          added_date: c.date || null,
+          sort_order: sortOrder++,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    }
+    if (cat.subcategories) {
+      for (const sub of cat.subcategories) {
+        for (const c of sub.companies) {
+          rows.push({
+            user_id: USER_ID,
+            section: cat.name,
+            best_owner: cat.best_owner || null,
+            subcategory: sub.name,
+            name: c.name,
+            website: c.website || null,
+            category: c.category || null,
+            primary_focus: c.primary_focus || null,
+            target_customer: c.target_customer || null,
+            pricing_model: c.pricing_model || null,
+            price_range: c.price_range || null,
+            funding: c.funding || null,
+            serves_cna: c.serves_cna || false,
+            serves_rn: c.serves_rn || false,
+            uses_ai: c.uses_ai || false,
+            key_differentiator: c.key_differentiator || null,
+            relevance: c.relevance || null,
+            threat: c.threat || 'low',
+            transcript_quotes: c.transcript_quotes || null,
+            added_date: c.date || null,
+            sort_order: sortOrder++,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+    }
+  }
+
+  if (rows.length === 0) return 0;
+
+  // Delete existing rows for this user, then insert fresh
+  const delResp = await restFetch(`atlas_competitors?user_id=eq.${USER_ID}`, { method: 'DELETE' });
+  if (!delResp.ok) {
+    console.error(`  Delete old competitors failed: ${delResp.status} ${await delResp.text()}`);
+    return 0;
+  }
+
+  // Insert in batches of 50
+  const BATCH = 50;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const batch = rows.slice(i, i + BATCH);
+    const resp = await restFetch('atlas_competitors', {
+      method: 'POST',
+      body: JSON.stringify(batch),
+    });
+    if (!resp.ok) {
+      console.error(`  Competitor insert batch ${i / BATCH + 1} failed: ${resp.status} ${await resp.text()}`);
+      return 0;
+    }
+  }
+
+  console.log(`  Synced ${rows.length} competitor rows to atlas_competitors`);
+  return rows.length;
 }
 
 // ── Node diff sync ─────────────────────────────────────────────────
@@ -227,13 +334,14 @@ try {
 }
 
 const docCount = await syncDocuments(keys);
+const compCount = await syncCompetitorRows(keys);
 const { inserted, updated, deleted } = await syncNodes(keys);
 
 const elapsed = ((performance.now() - start) / 1000).toFixed(2);
-const total = docCount + inserted + updated + deleted;
+const total = docCount + compCount + inserted + updated + deleted;
 
 if (total > 0) {
-  console.log(`\nDone in ${elapsed}s: ${docCount} docs, +${inserted} nodes, ~${updated} updated, -${deleted} deleted`);
+  console.log(`\nDone in ${elapsed}s: ${docCount} docs, ${compCount} competitors, +${inserted} nodes, ~${updated} updated, -${deleted} deleted`);
 } else {
   console.log(`\nNo changes to sync (${elapsed}s)`);
 }

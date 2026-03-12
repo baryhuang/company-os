@@ -2,7 +2,7 @@ import type { DimensionMeta, TreeNode, CompetitorData, LandscapeData, LandscapeM
 import { insforge } from './insforge';
 import { assembleTree } from './assembleTree';
 
-const isDev = import.meta.env.DEV;
+const isDev = false; // force DB mode to debug data mismatches
 const DOC_TABLE = 'atlas_documents';
 const NODE_TABLE = 'atlas_nodes';
 
@@ -149,9 +149,10 @@ export async function initializeUserData(userId: string): Promise<void> {
   }
 }
 
-export async function fetchDimensions(userId: string): Promise<DimensionMeta[]> {
+export async function fetchDimensions(_userId: string): Promise<DimensionMeta[]> {
   if (isDev) return fetchLocalJson<DimensionMeta[]>('dimensions.json');
-  return dbSelect<DimensionMeta[]>(userId, 'dimensions');
+  // Always read from __default__ — dimensions are global config, not per-user data
+  return dbSelect<DimensionMeta[]>('__default__', 'dimensions');
 }
 
 export async function fetchDimensionData(userId: string, name: string): Promise<TreeNode> {

@@ -35,7 +35,7 @@ export function useAtlasData(userId: string): AtlasData {
           return { id: d.id, data };
         }),
         fetchLandscapeData(userId).then(data => ({ id: '__landscape__', data })).catch(() => ({ id: '__landscape__', data: null })),
-        fetchProgressData(userId).then(data => ({ id: '__progress__', data })),
+        fetchProgressData(userId).then(data => ({ id: '__progress__', data })).catch(() => ({ id: '__progress__', data: null })),
         fetchAppointmentsData(userId).then(data => ({ id: '__appointments__', data })).catch(() => ({ id: '__appointments__', data: null })),
       ]);
 
