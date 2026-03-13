@@ -24,42 +24,16 @@ export function jsonToINode(node: TreeNode, depth = 0): INode {
   const isAbandoned = node.status === 'abandoned' || node.status === 'excluded';
   const isFinal = node.status === 'final';
 
-  const borderLeft = isFinal ? `3px solid ${color}` : `3px solid ${color}`;
-  const border = isFinal ? '2px solid #2a8a7a' : '1px solid #d8d0c4';
-  const opacity = isAbandoned ? 'opacity:0.55;' : '';
+  let label = node.name;
+  if (isAbandoned) label = `<del style="opacity:0.6">${label}</del>`;
+  if (isFinal) label = `<strong>${label}</strong>`;
 
-  let nameHtml = node.name;
-  if (isAbandoned) nameHtml = `<del>${nameHtml}</del>`;
-  if (isFinal) nameHtml = `<strong>${nameHtml}</strong>`;
-
-  const hasDetails = (depth > 0 && node.date) || node.desc;
-
-  let content: string;
-  if (depth === 0) {
-    // Root node: larger, no status icon
-    content = `<div style="border:${border}; border-left:${borderLeft}; border-radius:6px; padding:8px 14px; background:#faf8f4; min-width:140px; ${opacity}">` +
-      `<div style="font-weight:700; font-size:14px;">${nameHtml}</div>` +
-      `</div>`;
-  } else if (hasDetails) {
-    // Node with date/desc: header + details
-    const detailParts: string[] = [];
-    if (node.date) detailParts.push(node.date);
-    if (node.desc) detailParts.push(node.desc);
-    content = `<div style="border:${border}; border-left:${borderLeft}; border-radius:6px; padding:6px 10px; background:#faf8f4; min-width:120px; ${opacity}">` +
-      `<div style="font-weight:600; font-size:12px; margin-bottom:2px;">` +
-        `<span style="color:${color}">${icon}</span> ${nameHtml}` +
-      `</div>` +
-      `<div style="font-size:10px; color:#918a80; border-top:1px solid #ede8df; padding-top:3px; margin-top:3px;">` +
-        detailParts.join(' ') +
-      `</div>` +
-      `</div>`;
-  } else {
-    // Leaf node with no details: compact single-row card
-    content = `<div style="border:${border}; border-left:${borderLeft}; border-radius:6px; padding:5px 10px; background:#faf8f4; min-width:100px; ${opacity}">` +
-      `<div style="font-weight:600; font-size:12px;">` +
-        `<span style="color:${color}">${icon}</span> ${nameHtml}` +
-      `</div>` +
-      `</div>`;
+  let content = `<span style="color:${color}">${icon}</span> ${label}`;
+  if (depth > 0 && node.date) {
+    content += ` <span style="font-size:0.8em;color:#8a9e8c">${node.date}</span>`;
+  }
+  if (node.desc) {
+    content += ` <span style="font-size:0.8em;color:#918a80">${node.desc}</span>`;
   }
 
   const dateOrd = parseDateOrdinal(node.date || '');
@@ -301,7 +275,7 @@ interface MarkmapDimensionViewProps {
   onFitRequest: boolean;
 }
 
-const DIM_OPTS = { spacingH: 80, spacingV: 12, maxW: 360 };
+const DIM_OPTS = { spacingH: 80, spacingV: 8, maxW: 300 };
 
 export function MarkmapDimensionView({ treeData, expandLevel, onFitRequest }: MarkmapDimensionViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
