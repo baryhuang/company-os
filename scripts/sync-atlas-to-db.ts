@@ -18,7 +18,7 @@ import { basename, join } from 'path';
 import { flattenTree, type AtlasNodeRow, type TreeNode } from './lib/flatten-tree';
 import { createSnapshot } from './snapshot-atlas';
 
-const DATA_DIR = join(import.meta.dir, '../data/reports/data');
+const DATA_DIR = process.env.ATLAS_DATA_DIR || join(import.meta.dir, '../data/reports/data');
 const API_KEY = process.env.INSFORGE_API_KEY;
 const BASE_URL = process.env.INSFORGE_BASE_URL || 'https://gx2m4dge.us-east.insforge.app';
 const USER_ID = '__default__';
