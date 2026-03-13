@@ -17,7 +17,6 @@ export default async function(req) {
   });
 
   const url = new URL(req.url);
-  const path = url.pathname;
 
   // Parse action from query param: ?action=dimensions or ?action=data&name=market
   const action = url.searchParams.get('action');
