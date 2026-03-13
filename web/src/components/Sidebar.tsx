@@ -18,10 +18,12 @@ const GROUP_LABELS: Record<string, string> = {
   gtm: '\u{1F680} Go-to-Market',
   build: '\u{1F527} Build',
   org: '\u{1F3E2} Organization',
-  execution: '\u{1F3AF} Execution',
+  business: '\u{1F4BC} Business',
+  product: '\u{1F528} Product',
+  ops: '\u{2699} Operations',
 };
 
-const GROUP_ORDER = ['strategy', 'gtm', 'build', 'org', 'execution'];
+const GROUP_ORDER = ['strategy', 'ops', 'business', 'product'];
 
 export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, open, onClose, workspaceName }: SidebarProps) {
   const handleClick = (view: ViewType, dimIndex?: number) => {
