@@ -21,7 +21,7 @@ import { createSnapshot } from './snapshot-atlas';
 const DATA_DIR = process.env.ATLAS_DATA_DIR || join(import.meta.dir, '../data/reports/data');
 const API_KEY = process.env.INSFORGE_API_KEY;
 const BASE_URL = process.env.INSFORGE_BASE_URL || 'https://gx2m4dge.us-east.insforge.app';
-const USER_ID = '__default__';
+const USER_ID = process.env.ATLAS_USER_ID || '__default__';
 
 // These are stored as JSONB blobs in atlas_documents, not as flat nodes
 const DOC_KEYS = new Set(['dimensions', 'landscape', 'appointments-glance']);
