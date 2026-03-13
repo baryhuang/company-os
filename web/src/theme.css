@@ -744,6 +744,10 @@ body::before {
   fill: var(--text) !important;
   font-family: var(--font-body) !important;
 }
+.markmap-node > foreignObject {
+  transform: translateY(-50%);
+  overflow: visible;
+}
 
 /* ── Loading state ───────────────────────────── */
 .loading-screen {

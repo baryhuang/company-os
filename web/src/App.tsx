@@ -4,7 +4,7 @@ import { useAtlasData } from './hooks/useAtlasData';
 import { useWorkspace } from './hooks/useWorkspace';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
-import { MarkmapDimensionView } from './components/MarkmapView';
+import { D3TreeView } from './components/D3TreeView';
 import { OverviewView } from './components/OverviewView';
 import { CompetitorView } from './components/CompetitorView';
 import { TaskSearchView } from './components/TaskSearchView';
@@ -24,7 +24,6 @@ function AuthenticatedApp() {
   const [currentView, setCurrentView] = useState<ViewType>('overview');
   const [currentDimIndex, setCurrentDimIndex] = useState(0);
   const [expandLevel, setExpandLevel] = useState(-1);
-  const [fitRequest, setFitRequest] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('gantt');
   const [peopleTab, setPeopleTab] = useState<'tree' | 'meetings'>('tree');
@@ -35,11 +34,7 @@ function AuthenticatedApp() {
   }, []);
 
   const handleExpandLevel = useCallback((level: number) => {
-    if (level === 0) {
-      setFitRequest(prev => !prev);
-    } else {
-      setExpandLevel(level);
-    }
+    setExpandLevel(level);
   }, []);
 
   if (wsLoading) {
@@ -118,10 +113,8 @@ function AuthenticatedApp() {
                 ? <SwimGanttView treeData={progressData || dimensionsData[dimensions[currentDimIndex].id]} />
                 : peopleTab === 'meetings' && dimensions[currentDimIndex].id === 'people-network' && appointmentsData
                 ? <AppointmentsView data={appointmentsData} />
-                : <MarkmapDimensionView
+                : <D3TreeView
                     treeData={dimensionsData[dimensions[currentDimIndex].id]}
-                    expandLevel={expandLevel}
-                    onFitRequest={fitRequest}
                   />
               }
             </>
