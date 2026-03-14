@@ -202,6 +202,14 @@ function rowKey(r: { dimension: string; path: string }): string {
   return `${r.dimension}::${r.path}`;
 }
 
+function sortedStringify(obj: unknown): string {
+  return JSON.stringify(obj, (_, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.keys(v).sort().reduce((o: Record<string, unknown>, k) => { o[k] = (v as Record<string, unknown>)[k]; return o; }, {})
+      : v,
+  );
+}
+
 function rowsEqual(a: AtlasNodeRow, b: AtlasNodeRow): boolean {
   return (
     a.name === b.name &&
@@ -213,11 +221,11 @@ function rowsEqual(a: AtlasNodeRow, b: AtlasNodeRow): boolean {
     a.parent_path === b.parent_path &&
     a.verified === b.verified &&
     JSON.stringify(a.quotes) === JSON.stringify(b.quotes) &&
-    JSON.stringify(a.extra) === JSON.stringify(b.extra)
+    sortedStringify(a.extra) === sortedStringify(b.extra)
   );
 }
 
-async function syncNodes(keys: string[]): Promise<{ inserted: number; updated: number; deleted: number }> {
+async function syncNodes(keys: string[], syncAll: boolean): Promise<{ inserted: number; updated: number; deleted: number }> {
   const nodeKeys = keys.filter((k) => !DOC_KEYS.has(k));
   if (nodeKeys.length === 0) return { inserted: 0, updated: 0, deleted: 0 };
 
@@ -274,6 +282,7 @@ async function syncNodes(keys: string[]): Promise<{ inserted: number; updated: n
   }
 
   console.log(`  Diff: +${toInsert.length} new, ~${toUpdate.length} changed, -${toDelete.length} removed`);
+  let deleted = toDelete.length;
 
   // 4. Execute changes
   // Upsert (handles both insert and update)
@@ -300,15 +309,54 @@ async function syncNodes(keys: string[]): Promise<{ inserted: number; updated: n
     }
   }
 
-  return { inserted: toInsert.length, updated: toUpdate.length, deleted: toDelete.length };
+  // Clean up stale dimensions that no longer exist on disk (only when syncing --all)
+  if (syncAll) {
+    const allDimsResp = await fetch(`${BASE_URL}/api/database/advance/rawsql`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        query: `SELECT DISTINCT dimension FROM atlas_nodes WHERE user_id = $1`,
+        params: [USER_ID],
+      }),
+    });
+    if (allDimsResp.ok) {
+      const allDimsData = await allDimsResp.json() as { rows: { dimension: string }[] };
+      const dbDims = allDimsData.rows.map((r) => r.dimension);
+      const staleDims = dbDims.filter((d) => !nodeKeys.includes(d));
+      if (staleDims.length > 0) {
+        const staleResp = await fetch(`${BASE_URL}/api/database/advance/rawsql`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`,
+          },
+          body: JSON.stringify({
+            query: `DELETE FROM atlas_nodes WHERE dimension = ANY($1::text[])`,
+            params: [staleDims],
+          }),
+        });
+        if (staleResp.ok) {
+          const result = await staleResp.json() as { rowCount: number };
+          console.log(`  Cleaned up ${staleDims.length} stale dimension(s): ${staleDims.join(', ')} (${result.rowCount} rows)`);
+          deleted += result.rowCount;
+        }
+      }
+    }
+  }
+
+  return { inserted: toInsert.length, updated: toUpdate.length, deleted };
 }
 
 // ── Main ───────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
+const syncAllFlag = args.includes('--all');
 let keys: string[];
 
-if (args.includes('--all')) {
+if (syncAllFlag) {
   keys = getAllKeys();
   console.log(`Syncing ALL ${keys.length} files`);
 } else if (args.length > 0 && !args[0].startsWith('-')) {
@@ -335,7 +383,7 @@ try {
 
 const docCount = await syncDocuments(keys);
 const compCount = await syncCompetitorRows(keys);
-const { inserted, updated, deleted } = await syncNodes(keys);
+const { inserted, updated, deleted } = await syncNodes(keys, syncAllFlag);
 
 // ── Propagate changes to all user scopes ──────────────────────────
 // Users get a copy of __default__ on first login. After that, syncs only
