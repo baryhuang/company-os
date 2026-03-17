@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from server.bot_state import state
 
-app = FastAPI(title="CareMojo API", docs_url=None, redoc_url=None)
+app = FastAPI(title="Company Brain API", docs_url=None, redoc_url=None)
 
 # CORS — allow the frontend (and localhost dev) to call the API
 _cors_origins = [
