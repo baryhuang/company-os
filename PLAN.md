@@ -1,55 +1,88 @@
-# Repurpose Plan: From Showcase → Founder Tool
+# Mobile View — Implementation Plan
 
-## 1. Telegram Bot — Strip to Core
+## Scope
+Make the app usable on iPhone 14 (390px) and small Android (360px). Pure CSS additions + minimal JSX tweaks. Zero desktop regressions.
 
-**Remove:**
-- `_chat()`, `_CHAT_TOOLS`, `_analyze_with_file_agent()` — AI conversation loop
-- `_chat_histories` / `_load_chat_histories()` / `_save_chat_histories()` — history persistence
-- Claude Agent SDK / GLM integration entirely
-- `bot_state.chat_count`
+---
 
-**Keep:**
-- `handle_voice()` — voice/audio/video → transcribe
-- `handle_document()` — audio/video docs → transcribe, other files → store
-- `handle_text()` — simplified: accept text as a file (save to S3), no AI chat
-- `_summarize()` — OpenAI summarization of long transcripts
-- S3 sync, dedup index, FastAPI server
+## Step 1: Global mobile foundation (theme.css)
 
-## 2. Web — Replace with caremojo-atlas
+Add a single `@media (max-width: 767px)` block at the end of theme.css covering:
 
-**Remove:** Entire `web/` React app
+**TopBar** — stack title above actions, wrap buttons:
+- `flex-wrap: wrap`, reduced padding to 16px
+- Title row takes full width, actions wrap below
+- Buttons get 36px min-height for touch
 
-**Replace with:** caremojo-atlas static site:
-- `index.html` — Decision Atlas (D3 trees + markmap mindmap)
-- `executive-report.html` — integrated into sidebar nav
-- `css/theme.css`, `js/*.js`, `data/*.json`
+**Timeline bar** — bigger knobs, tighter padding:
+- Knobs go from 20px to 28px with invisible 48px hit area via `::after`
+- Labels always visible (no hover on touch)
+- Padding reduced to 16px
 
-**Deploy to:** insforge-notesly (static site)
+**Global padding** — all scroll containers from 24px to 16px
 
-## 3. New API: Atlas Data Update
+**Mobile toggle** — 44px touch target (currently 38px)
 
-Add endpoint for external tools to update atlas JSON data:
+**View tabs** — horizontal scroll with momentum
 
-```
-PUT /api/atlas/data/{filename}
-```
-- Accepts JSON body, writes to `data/{filename}.json`
-- Validates filename against known dimensions
-- Serves current data via GET for the static site
+**Tooltips** — constrained to `calc(100vw - 32px)`
 
-```
-GET /api/atlas/data/{filename}
-```
-- Returns the JSON content for a given dimension
+**AI modal** — bottom sheet style (100% width, rounded top)
 
-## 4. API Cleanup
+---
 
-**Keep:** `/api/health`, `/api/status` (remove chat_count), static file serving
-**Add:** `/api/atlas/data/{filename}` (GET + PUT)
-**Remove:** `/api/config`, `/api/restart`
+## Step 2: Overview cards (theme.css)
 
-## 5. Deployment
+- Cards go from `width: 280px; height: 280px` to `width: 100%; height: auto`
+- Body overflow becomes visible (no clamp needed in single column)
+- Expand button grows to 36px
+- Grid gap tightens to 12px
 
-- **Bot + API**: ECS (serves both bot and atlas API)
-- **Web (atlas static)**: insforge-notesly
-- Atlas fetches data from the API (or bundled static JSON — TBD based on deploy model)
+---
+
+## Step 3: Competitor table → cards (theme.css + CompetitorView.tsx)
+
+- Map grid becomes single column
+- Table rows become stacked cards with `data-label` pseudo-elements
+- Hide thead, each `<td>` shows its column name via `::before`
+- **TSX**: add `data-label` attribute to ~6 `<td>` elements
+
+---
+
+## Step 4: OKR/KPI columns (theme.css + OKRTableView.tsx)
+
+- Hide definition column (`.okr-def-col`) and why column (`.okr-why-col`)
+- Week cells shrink from 48px to 36px min-width
+- **TSX**: add matching classes to `<th>` elements (~3 lines)
+
+---
+
+## Step 5: Partners table → cards (theme.css + PartnersView.tsx)
+
+- Same card pattern as Competitor
+- Modal becomes bottom sheet
+- **TSX**: add `data-label` to ~8 `<td>` elements
+
+---
+
+## Step 6: VEM document (vem-document.css)
+
+- Stack label cell above value cell on phones
+- Table rows become flex-column
+
+---
+
+## Files touched
+
+| File | Change | Lines |
+|------|--------|-------|
+| `theme.css` | New media query block | ~100 |
+| `CompetitorView.tsx` | `data-label` on `<td>` | ~6 |
+| `OKRTableView.tsx` | Classes on `<th>` | ~3 |
+| `PartnersView.tsx` | `data-label` on `<td>` | ~8 |
+| `vem-document.css` | New media query | ~15 |
+
+## Not in scope (later)
+- SVG views (Markmap, D3 Tree, Gantt) — need pinch-zoom
+- Executive Report — portrait redesign
+- Bottom tab bar

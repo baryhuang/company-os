@@ -199,12 +199,12 @@ function TableView({ competitors, onHover, onLeave }: {
           {sorted.map(r => (
             <tr key={`${r.section}-${r.name}`} onMouseEnter={(e) => onHover(r, e)} onMouseLeave={onLeave}>
               <td className="col-name">{r.name}</td>
-              <td>{r.category || '—'}</td>
-              <td>{r.target_customer || '—'}</td>
-              <td className="col-pricing">{r.pricing_model ? `${r.pricing_model}${r.price_range ? ` · ${r.price_range}` : ''}` : '—'}</td>
-              <td className="col-funding">{r.funding || '—'}</td>
-              <td className="col-diff">{r.key_differentiator || '—'}</td>
-              <td>{r.uses_ai ? '\u2705' : ''}</td>
+              <td data-label="Category">{r.category || '—'}</td>
+              <td data-label="Target">{r.target_customer || '—'}</td>
+              <td data-label="Pricing" className="col-pricing">{r.pricing_model ? `${r.pricing_model}${r.price_range ? ` · ${r.price_range}` : ''}` : '—'}</td>
+              <td data-label="Funding" className="col-funding">{r.funding || '—'}</td>
+              <td data-label="Differentiator" className="col-diff">{r.key_differentiator || '—'}</td>
+              <td data-label="AI">{r.uses_ai ? '\u2705' : ''}</td>
             </tr>
           ))}
         </tbody>

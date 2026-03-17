@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SignInButton, SignedIn, SignedOut, useUser } from '@insforge/react';
 import { useAtlasData } from './hooks/useAtlasData';
 import { useWorkspace } from './hooks/useWorkspace';
@@ -32,6 +32,12 @@ function AuthenticatedApp() {
   const [peopleTab, setPeopleTab] = useState<'tree' | 'meetings'>('tree');
   const [timelineRange, setTimelineRange] = useTimelineRange();
   const [savedRange, setSavedRange] = useState<{ startOrd: number | null; endOrd: number | null } | null>(null);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    document.body.classList.toggle('sidebar-open', sidebarOpen);
+    return () => document.body.classList.remove('sidebar-open');
+  }, [sidebarOpen]);
 
   const handleResetTimeline = useCallback(() => {
     const isFiltered = timelineRange.startOrd !== null || timelineRange.endOrd !== null;
@@ -86,6 +92,7 @@ function AuthenticatedApp() {
       <button className="mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
         {'\u2630'}
       </button>
+      <div className={`sidebar-backdrop${sidebarOpen ? ' visible' : ''}`} onClick={() => setSidebarOpen(false)} />
       <div className="app">
         <Sidebar
           dimensions={dimensions}

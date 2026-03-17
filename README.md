@@ -1,180 +1,161 @@
-# ai-meeting-notes-agent
+# Company OS
 
-> Every founding team makes their best decisions in conversation. Then loses them. So I built a system of record for everything said out loud.
+### From conversation to structured knowledge to execution.
 
-Every startup I know has this problem. You're in six meetings a day — investors, customers, advisors, co-founder syncs. The most important decisions are made verbally. A week later, nobody remembers the details. Code goes in GitHub. Tasks go in Linear. But verbal decisions? Customer insights from discovery calls? That idea you voice-memo'd yourself at midnight? There's no system of record for any of it.
+Every founding team makes their best decisions in conversation. Then loses them.
 
-I'm a CTO. I don't buy SaaS tools when I can build them. So I built a Telegram bot — record a voice memo, send it, get a transcript back with speaker labels. Then ask it questions across every conversation you've ever recorded: *"What did we agree on pricing?"* *"What did the customer say about onboarding?"* *"What did the investor say about our TAM?"*
+Code goes in GitHub. Tasks go in Linear. But the verbal decisions, customer insights, strategic pivots, advisor feedback — the stuff that actually shapes your company? There's no system of record for any of it.
 
-I open-sourced it because I think builders should show their work, not just talk about AI. This is production code my team actually uses.
+Company OS is that system of record.
 
-## Self-hosted. Your conversations stay yours.
+---
 
-Your most sensitive recordings — investor negotiations, co-founder disagreements, customer deal terms — should never live on someone else's server. Self-host with your own API keys. Free forever. MIT licensed.
+## Why this exists
 
-<img width="1327" height="672" alt="Screenshot 2026-02-19 at 12 16 31 PM" src="https://github.com/user-attachments/assets/f7da764c-5df2-4a10-b6d9-7bf2d09c4d9c" />
+Every company has an operating system. Most aren't conscious of it.
 
-https://github.com/user-attachments/assets/d9013853-9d44-43d6-b1a4-dfdad1989480
+Your OS is how decisions get made, how priorities get shaped, how knowledge gets shared across your team. When it's working, people move fast without asking permission. When it's broken, you spend Monday re-interpreting what "the work" is.
 
-## Why I Built This
+Most startups run their OS on a mix of Slack threads, Google Docs nobody reads, and whatever the CEO remembers from last Tuesday's call. The important stuff lives in people's heads — until they forget it.
 
-- **Verbal decisions have no system of record.** Every founding team agrees on things in calls. A week later, nobody remembers the details. That's how teams end up misaligned.
-- **Customer insights vanish.** You do 8 discovery calls in a week. By Friday, you can't remember which customer said what about onboarding vs. pricing. You end up building the wrong thing.
-- **Voice memos were a dead end.** iPhone Voice Memos is the best recorder ever made — one tap from the lock screen. But I had hundreds of recordings I'd never listen to again.
-- **Recording apps solve the wrong problem.** Granola, Otter, Fireflies — they want you to download their app, and your recordings live on their servers. I'm a CTO. I don't buy SaaS tools when I can build them.
-- **What was missing was the bridge.** Transcription that feeds into an AI agent with memory of every conversation my team has had.
+I built Company OS because I got tired of my own team losing decisions. We're a 5-person founding team in Techstars. Six meetings a day — investors, customers, advisors, co-founder syncs. A week later, nobody remembers the details.
 
-## What It Does
+So I built a system where conversations become structured knowledge, and structured knowledge drives execution.
 
-Send anything to the Telegram bot. It figures out what to do.
+---
 
-| You send | Bot does |
-|----------|----------|
-| Voice memo or audio/video file | Transcribes with speaker labels + timestamps. Long recordings get an AI summary. |
-| Text message | AI chat — ask questions, get help, have a conversation. |
-| *"What did we discuss yesterday?"* | Searches your stored transcripts and files, answers with context. |
-| Any other file (PDF, image, doc...) | Stores it for the AI agent. Ask about it later. |
+## How it works
 
-All files — audio, transcripts, uploads — stored locally and optionally synced to S3. Survives container restarts.
+```
+Voice memo / Zoom meeting / recording
+        ↓
+   Transcription (speaker-labeled)
+        ↓
+   BubbleLab AI workflow
+   (syncs all files → Google Drive + S3)
+        ↓
+   Claude Code meta-skill → structured dimensions
+        ↓
+   ┌─────────┐  ┌─────────┐  ┌──────────┐
+   │  Write   │  │  Query  │  │ Backend  │
+   │ markdown │  │memsearch│  │ InsForge │
+   │ (truth)  │→ │ (index) │  │ (db/auth)│
+   └─────────┘  └─────────┘  └──────────┘
+        ↓            ↓
+   Founder dashboard (you build yours)
+```
 
-## How It Works
+**Record** — Send a voice memo to Telegram, or drop a meeting recording. Get a transcript back with speaker labels in under a minute.
 
-1. **Record** with Apple Voice Memos (or any recorder on your phone)
-2. **Share** the recording to Telegram — no new app, no exporting, no emailing yourself
-3. **Read** the full transcript with speaker labels and timestamps, right in the chat
-4. **Ask** questions across everything you've ever recorded
+**Structure** — AI processes transcripts into your company's knowledge dimensions. Not a fixed template — the dimensions emerge from your actual conversations. A healthcare startup ends up with `market/`, `validation/`, `regulatory/`. A fintech startup gets `compliance/`, `partnerships/`, `unit-economics/`. Your company, your structure.
 
-Works with any language. Handles multiple speakers. Transcripts come back in under a minute.
+**Query** — Ask questions across everything your team has ever discussed. "What did we decide about pricing?" "What did the customer say about onboarding?" "What did the advisor say about our go-to-market?" Semantic search finds it.
 
-## Getting Started
+**Execute** — Decisions and action items flow into Linear. Every task traces back to the conversation where it originated.
 
-### 1. Create a Telegram Bot (2 minutes)
+**See** — Each team member builds their own dashboard. The CEO sees the vision map and fundraise pipeline. The COO sees the facility kanban and pilot tracker. The content lead sees the scenario library. Same data, different views.
 
-1. Open Telegram and search for [@BotFather](https://t.me/BotFather)
-2. Send `/newbot`
-3. Pick a name for your bot (e.g., "My Transcriber")
-4. Pick a username (e.g., `my_transcriber_bot`)
-5. BotFather gives you an API token — copy it
+---
 
-### 2. Run the Bot
+## What makes this different
+
+**Clarity over consensus.** The system doesn't just record meetings — it tracks *who decided what, when, and why*. Six months from now, you can trace any strategic decision back to the exact conversation.
+
+**Deliberate documentation.** Decisions, learnings, and direction live somewhere visible — not in someone's head, not in a Slack thread that scrolled away. Markdown files, git-tracked, human-readable.
+
+**Your dimensions, not ours.** No predefined schema. No "fill in these 12 boxes." The knowledge structure emerges from your conversations, the way your team actually thinks about your business.
+
+**Self-hosted. Your conversations stay yours.** Your most sensitive recordings — investor negotiations, co-founder disagreements, customer deal terms — never live on someone else's server. Run it with your own API keys.
+
+---
+
+## What's inside
+
+| Layer | What it does | How |
+|-------|-------------|-----|
+| **Input** | Voice memos, meeting recordings, Zoom calls, documents | Telegram bot, Zoom integration |
+| **Transcription** | Speaker-labeled transcripts | AssemblyAI |
+| **File sync** | All files centralized in one place | [BubbleLab](https://github.com/bubblelabai/BubbleLab) workflows → Google Drive + S3 |
+| **Processing** | Conversations → structured knowledge | Claude Code + meta-skill |
+| **Backend** | Database, auth, storage, API | [InsForge](https://insforge.dev) — AI-native backend |
+| **Storage** | Markdown filesystem (source of truth) | Git-tracked `.md` files |
+| **Retrieval** | Semantic search across all knowledge | memsearch (vector + BM25) |
+| **Execution** | Action items → task tracking | Linear integration |
+| **Visualization** | Per-user dashboards | React components, vibe-coded |
+
+---
+
+## Quick start
+
+### 1. Transcription bot (5 minutes)
+
+Record conversations, get transcripts. This is your input layer.
 
 ```bash
-git clone <repo-url> && cd ai-meeting-notes-agent
+git clone https://github.com/baryhuang/company-os.git
+cd company-os
 cp .env.example .env
-```
-
-Edit `.env` and fill in your API keys:
-```
-ASSEMBLY_API_KEY=your_assemblyai_key
-TELEGRAM_BOT_TOKEN=your_bot_token
-```
-
-Start the bot:
-```bash
+# Add your API keys (see below)
 uv run telegram_bot.py
 ```
 
-That's it. Send a voice memo to your bot on Telegram and get a transcript back.
+Send a voice memo to your Telegram bot. Get a speaker-labeled transcript back.
 
-### Prerequisites
+### 2. Knowledge processing
 
-You need two API keys to get started. Both are free:
+Transcripts get processed into your company's dimension structure. Start with whatever makes sense — the system evolves as your company does.
 
-| Key | What it's for | Where to get it | Cost |
-|-----|--------------|-----------------|------|
-| `TELEGRAM_BOT_TOKEN` | Receive and reply to messages | Message [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot` | Free |
-| `ASSEMBLY_API_KEY` | Transcription with speaker labels | [assemblyai.com/app/account](https://www.assemblyai.com/app/account) | Free tier included |
+### 3. Your dashboard
 
-### Optional keys (unlock more features)
+Build your own view of your company's knowledge. Use the component library or start from scratch.
 
-| Key | What it unlocks |
-|-----|----------------|
-| `OPENAI_API_KEY` | AI chat + summarization. Works with any OpenAI-compatible API (OpenAI, OpenRouter, DigitalOcean, etc.) |
-| `OPENAI_BASE_URL` | Custom endpoint (default: `https://api.openai.com/v1`) |
-| `OPENAI_MODEL` | Model for chat + summarization (default: `gpt-4o-mini`) |
-| `GLM_API_KEY` | File analysis via [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk-python). Ask questions about your stored files. |
-| `GLM_MODEL` | Model for file analysis (default: `glm-4-plus`) |
-| `ANTHROPIC_BASE_URL` | Anthropic-compatible endpoint (default: `https://api.z.ai/api/anthropic`). Works with Z.AI, Anthropic, or any compatible provider. |
-| `S3_BUCKET` | S3 storage sync — all files mirrored to S3, restored on container restart |
-| `BOT_NAME` | Storage prefix (default: `transcribe-bot`) |
+---
+
+## API keys
+
+| Key | What it's for | Required? |
+|-----|--------------|-----------|
+| `TELEGRAM_BOT_TOKEN` | Receive and reply to messages | Yes |
+| `ASSEMBLY_API_KEY` | Transcription with speaker labels | Yes |
+| `OPENAI_API_KEY` | AI chat + summarization | Optional |
+| `ANTHROPIC_API_KEY` | Knowledge processing | Optional |
+| `S3_BUCKET` | Cloud storage sync | Optional |
+
+Get started with just two free API keys: [Telegram BotFather](https://t.me/BotFather) and [AssemblyAI](https://assemblyai.com/app/account).
+
+---
 
 ## Deploy
 
-### Docker (any server)
-
+**Docker** (any server):
 ```bash
 docker compose up -d
 ```
 
-The bot uses polling (no inbound ports needed), so it runs anywhere Docker runs — a $5 VPS, a Raspberry Pi, or your laptop.
+**Railway** (one click):
 
-### AWS ECS (via GitHub Actions)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/...)
 
-Fork this repo, add secrets in GitHub repo settings, and push. It deploys automatically.
+Runs anywhere Docker runs — a $5 VPS, a Raspberry Pi, or your laptop. No inbound ports needed.
 
-**Required secrets:**
+---
 
-| GitHub Secret | Value |
-|---------------|-------|
-| `AWS_ACCESS_KEY_ID` | Your AWS access key |
-| `AWS_SECRET_ACCESS_KEY` | Your AWS secret key |
-| `ASSEMBLY_API_KEY` | Your AssemblyAI key |
-| `TELEGRAM_BOT_TOKEN` | Your bot token from BotFather |
+## Built by
 
-**Optional secrets (for AI + storage features):**
+I'm a startup CTO building [PeakMojo](https://peakmojo.com) — AI for healthcare workforce, currently in [Techstars 2026](https://www.techstars.com/).
 
-| GitHub Secret | Value |
-|---------------|-------|
-| `OPENAI_API_KEY` | OpenAI-compatible API key for chat + summarization |
-| `OPENAI_BASE_URL` | Custom endpoint URL |
-| `OPENAI_MODEL` | Model name |
-| `GLM_API_KEY` | API key for file analysis |
-| `GLM_MODEL` | Model name for file analysis |
-| `ANTHROPIC_BASE_URL` | Anthropic-compatible endpoint URL |
-| `S3_BUCKET` | S3 bucket name for file sync |
-| `BOT_NAME` | Storage prefix |
+This is the actual system my team uses to run our company. We've processed 50+ days of meeting transcripts into 16 knowledge dimensions with 800+ structured nodes. Every strategic decision we've made traces back to a conversation.
 
-Every push to `main` builds and deploys to ECS Fargate. You can also trigger it manually from the Actions tab.
+I open-source it because founders should show their work, not just talk about AI.
 
-### Railway (one click)
+---
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/new?repo=your-repo-url)
+## Technical details
 
-Set your API keys as environment variables in the Railway dashboard.
+See [TECHNICAL.md](TECHNICAL.md) for architecture, configuration, and deployment details.
 
-### Already have a backlog?
+---
 
-Got a folder full of voice memos you never transcribed? Do them all at once:
+## License
 
-```bash
-uv run transcribe.py -f /path/to/recordings/
-```
-
-## Supported Formats
-
-Voice notes from Telegram, iPhone Voice Memos, and any standard audio/video format: `.m4a`, `.mp3`, `.ogg`, `.wav`, `.mp4`, `.mov`, and more.
-
-## Architecture
-
-- **Telegram bot** (`telegram_bot.py`) — message router: voice to transcription, text to conversation, files to storage
-- **Transcription** — AssemblyAI with speaker diarization, auto language detection, multi-format support
-- **Conversation** — OpenAI-compatible LLM for chat, summarization, and Q&A
-- **Claude Code Agent** — autonomous agent (via Claude Agent SDK) that reads your stored files and answers questions with full context
-- **Storage** — unified `data/{bot_name}/YYYY/MM/DD/` structure, identical paths locally and on S3
-- **S3 sync** — bidirectional: pulls from S3 on startup, pushes after every write
-- **Web dashboard** — React dashboard showing module status, deployment info, and live configuration
-
-## What's Next
-
-- **Team workspaces** — shared memory across your founding team
-- **Cross-conversation search** — "What have customers said about pricing?" across every recording
-- **Calendar integration** — auto-match recordings to meetings
-- **Personalized notes** — each participant gets notes relevant to them
-
-## Built By
-
-I'm a startup CTO building AI for healthcare at [PeakMojo](https://peakmojo.com). I solve real problems with AI and I build in the open. This is one of several internal tools I've open-sourced — if you're a founder who ships, star the repo or just steal the code. That's what open source is for.
-
-## Technical Details
-
-See [TECHNICAL.md](TECHNICAL.md) for detailed architecture, configuration, Google Drive watcher, and deployment instructions.
+MIT — use it, fork it, make it yours. That's what open source is for.

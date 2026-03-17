@@ -249,17 +249,17 @@ export function PartnersView({ treeData }: { treeData: TreeNode }) {
               {sorted.map((r, i) => (
                 <tr key={i} onClick={() => setSelected(r)} className="partner-row-clickable">
                   <td className="col-name">{r.name}</td>
-                  <td className="col-tier">{r.tier.replace(/^Tier \d+:\s*/, '')}</td>
-                  <td>
+                  <td className="col-tier" data-label="Tier">{r.tier.replace(/^Tier \d+:\s*/, '')}</td>
+                  <td data-label="Status">
                     <span className={`partner-status ${STATUS_CLASS[r.status || ''] || ''}`}>
                       {STATUS_LABELS[r.status || ''] || r.status || '—'}
                     </span>
                   </td>
-                  <td><span className={`fit-badge ${fitClass(r.strategic_fit)}`}>{fitLabel(r.strategic_fit)}</span></td>
-                  <td><span className={`fit-badge ${fitClass(r.team_priority)}`}>{fitLabel(r.team_priority)}</span></td>
-                  <td>{r.in_contact ? '\u2705' : ''}</td>
-                  <td className="col-sponsors">{r.deal_sponsors || '—'}</td>
-                  <td className="col-notes">{r.desc ? r.desc.slice(0, 80) + (r.desc.length > 80 ? '...' : '') : '—'}</td>
+                  <td data-label="Fit"><span className={`fit-badge ${fitClass(r.strategic_fit)}`}>{fitLabel(r.strategic_fit)}</span></td>
+                  <td data-label="Priority"><span className={`fit-badge ${fitClass(r.team_priority)}`}>{fitLabel(r.team_priority)}</span></td>
+                  <td data-label="Contact">{r.in_contact ? '\u2705' : ''}</td>
+                  <td className="col-sponsors" data-label="Sponsors">{r.deal_sponsors || '—'}</td>
+                  <td className="col-notes" data-label="Notes">{r.desc ? r.desc.slice(0, 80) + (r.desc.length > 80 ? '...' : '') : '—'}</td>
                 </tr>
               ))}
             </tbody>

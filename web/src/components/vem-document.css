@@ -124,3 +124,30 @@
   margin: 0 -40px;
   padding: 8px 40px;
 }
+
+/* ── Mobile ── */
+@media (max-width: 767px) {
+  .vem-doc { padding: 16px 12px 0; }
+  .vem-doc-inner { margin-bottom: 40px; }
+  .vem-title-row td { font-size: 15px; padding: 10px 12px; }
+  .vem-section-row td { font-size: 12px; padding: 8px 12px; }
+
+  /* Stack label above value */
+  .vem-content-row { display: flex; flex-direction: column; }
+  .vem-content-row td {
+    display: block; width: 100% !important;
+  }
+  .vem-label-cell {
+    border-bottom: none !important;
+    padding: 8px 12px 4px;
+    font-size: 11px;
+  }
+  .vem-value-cell {
+    padding: 4px 12px 10px;
+  }
+
+  .vem-doc > .timeline-bar {
+    margin: 0 -12px;
+    padding: 8px 12px;
+  }
+}
