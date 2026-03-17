@@ -31,8 +31,13 @@ export function useAtlasData(userId: string): AtlasData {
 
       const results = await Promise.all([
         ...dims.filter(d => d.file).map(async (d) => {
-          const data = await fetchDimensionData(userId, d.id);
-          return { id: d.id, data };
+          try {
+            const data = await fetchDimensionData(userId, d.id);
+            return { id: d.id, data };
+          } catch {
+            console.warn(`Failed to load dimension: ${d.id}`);
+            return { id: d.id, data: null };
+          }
         }),
         fetchLandscapeData(userId).then(data => ({ id: '__landscape__', data })).catch(() => ({ id: '__landscape__', data: null })),
         fetchProgressData(userId).then(data => ({ id: '__progress__', data })).catch(() => ({ id: '__progress__', data: null })),
@@ -49,7 +54,7 @@ export function useAtlasData(userId: string): AtlasData {
           setProgressData(r.data as TreeNode);
         } else if (r.id === '__appointments__') {
           setAppointmentsData(r.data as AppointmentsData);
-        } else {
+        } else if (r.data) {
           dataMap[r.id] = r.data as TreeNode;
         }
       }

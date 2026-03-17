@@ -18,12 +18,10 @@ const GROUP_LABELS: Record<string, string> = {
   gtm: '\u{1F680} Go-to-Market',
   build: '\u{1F527} Build',
   org: '\u{1F3E2} Organization',
-  business: '\u{1F4BC} Business',
-  product: '\u{1F528} Product',
-  ops: '\u{2699} Operations',
+  execution: '\u{1F3AF} Execution',
 };
 
-const GROUP_ORDER = ['strategy', 'ops', 'business', 'product'];
+const GROUP_ORDER = ['strategy', 'gtm', 'build', 'org', 'execution'];
 
 export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, open, onClose, workspaceName }: SidebarProps) {
   const handleClick = (view: ViewType, dimIndex?: number) => {
@@ -103,6 +101,18 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
                     key={dim.id}
                     className={`nav-item${currentView === 'partners' ? ' active' : ''}`}
                     onClick={() => handleClick('partners')}
+                  >
+                    <span className="icon">{dim.icon}</span>
+                    {dim.title}
+                  </div>
+                );
+              }
+              if (dim.id === 'okr_kpi') {
+                return (
+                  <div
+                    key={dim.id}
+                    className={`nav-item${currentView === 'okr' ? ' active' : ''}`}
+                    onClick={() => handleClick('okr')}
                   >
                     <span className="icon">{dim.icon}</span>
                     {dim.title}

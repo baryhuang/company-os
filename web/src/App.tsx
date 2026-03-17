@@ -13,6 +13,7 @@ import { SwimGanttView } from './components/SwimGanttView';
 import { AppointmentsView } from './components/AppointmentsView';
 import { VEMDocumentView } from './components/VEMDocumentView';
 import { PartnersView } from './components/PartnersView';
+import { OKRTableView } from './components/OKRTableView';
 import { WorkspacePicker } from './components/WorkspacePicker';
 import { SettingsView } from './components/SettingsView';
 import type { ViewType } from './types';
@@ -139,6 +140,10 @@ function AuthenticatedApp() {
 
           {currentView === 'partners' && dimensionsData['strategic-partners'] && (
             <PartnersView treeData={dimensionsData['strategic-partners']} />
+          )}
+
+          {currentView === 'okr' && dimensionsData['okr_kpi'] && (
+            <OKRTableView treeData={dimensionsData['okr_kpi']} />
           )}
 
           {currentView === 'tasks' && (
