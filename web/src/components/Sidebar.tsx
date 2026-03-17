@@ -29,15 +29,27 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
     onClose();
   };
 
-  const grouped = useMemo(() => {
+  // IDs pinned to the top (Techstars required)
+  const PINNED_IDS = new Set(['okr_kpi', 'competitor', 'strategic-partners']);
+
+  const { pinned, grouped } = useMemo(() => {
+    const pinnedItems: { dim: DimensionMeta; index: number }[] = [];
     const groups: { group: string; label: string; items: { dim: DimensionMeta; index: number }[] }[] = [];
     const groupMap = new Map<string, { dim: DimensionMeta; index: number }[]>();
 
     dimensions.forEach((dim, i) => {
+      if (PINNED_IDS.has(dim.id)) {
+        pinnedItems.push({ dim, index: i });
+        return;
+      }
       const g = dim.group || 'other';
       if (!groupMap.has(g)) groupMap.set(g, []);
       groupMap.get(g)!.push({ dim, index: i });
     });
+
+    // Sort pinned in desired order: okr_kpi, competitor, strategic-partners
+    const pinnedOrder = ['okr_kpi', 'competitor', 'strategic-partners'];
+    pinnedItems.sort((a, b) => pinnedOrder.indexOf(a.dim.id) - pinnedOrder.indexOf(b.dim.id));
 
     for (const g of GROUP_ORDER) {
       const items = groupMap.get(g);
@@ -51,7 +63,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
       groups.push({ group: g, label: GROUP_LABELS[g] || g, items });
     }
 
-    return groups;
+    return { pinned: pinnedItems, grouped: groups };
   }, [dimensions]);
 
   return (
@@ -76,49 +88,27 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
           <span className="icon">{'\uD83D\uDDFA\uFE0F'}</span>Vision to Execution
         </div>
 
+        {pinned.map(({ dim }) => {
+          const viewMap: Record<string, ViewType> = { okr_kpi: 'okr', competitor: 'competitor', 'strategic-partners': 'partners' };
+          const view = viewMap[dim.id];
+          return (
+            <div
+              key={dim.id}
+              className={`nav-item${currentView === view ? ' active' : ''}`}
+              onClick={() => handleClick(view)}
+            >
+              <span className="icon">{dim.icon}</span>
+              {dim.title}
+            </div>
+          );
+        })}
+
         {grouped.map(({ group, label, items }) => (
           <div key={group}>
             <div className="nav-section">{label}</div>
             {items.map(({ dim, index }) => {
               // Skip — already shown as doc view above
               if (dim.id === 'vision_execution_map') return null;
-              // Special views that aren't tree dimensions
-              if (dim.id === 'competitor') {
-                return (
-                  <div
-                    key={dim.id}
-                    className={`nav-item${currentView === 'competitor' ? ' active' : ''}`}
-                    onClick={() => handleClick('competitor')}
-                  >
-                    <span className="icon">{dim.icon}</span>
-                    {dim.title}
-                  </div>
-                );
-              }
-              if (dim.id === 'strategic-partners') {
-                return (
-                  <div
-                    key={dim.id}
-                    className={`nav-item${currentView === 'partners' ? ' active' : ''}`}
-                    onClick={() => handleClick('partners')}
-                  >
-                    <span className="icon">{dim.icon}</span>
-                    {dim.title}
-                  </div>
-                );
-              }
-              if (dim.id === 'okr_kpi') {
-                return (
-                  <div
-                    key={dim.id}
-                    className={`nav-item${currentView === 'okr' ? ' active' : ''}`}
-                    onClick={() => handleClick('okr')}
-                  >
-                    <span className="icon">{dim.icon}</span>
-                    {dim.title}
-                  </div>
-                );
-              }
               if (dim.id === 'task_search') {
                 return (
                   <div
