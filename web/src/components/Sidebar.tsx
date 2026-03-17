@@ -79,7 +79,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
           className={`nav-item${currentView === 'overview' ? ' active' : ''}`}
           onClick={() => handleClick('overview')}
         >
-          <span className="icon">{'\uD83C\uDFE0'}</span>Overview
+          <span className="icon">{'\uD83C\uDFE0'}</span>Dashboard
         </div>
         <div
           className={`nav-item${currentView === 'vem' ? ' active' : ''}`}
