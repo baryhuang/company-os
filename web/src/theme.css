@@ -251,6 +251,54 @@ body::before {
   border-color: var(--green);
   box-shadow: 0 2px 8px rgba(45,122,62,0.25);
 }
+.timeline-toggle {
+  margin-left: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.toggle-track {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--blue);
+  transition: background 0.25s;
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+}
+.toggle-track.all {
+  background: var(--green);
+}
+.toggle-thumb {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.25s cubic-bezier(.4,.0,.2,1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.toggle-track.all .toggle-thumb {
+  transform: translateX(22px);
+}
+.toggle-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255,255,255,0.85);
+  pointer-events: none;
+}
+.toggle-icon.left { left: 5px; }
+.toggle-icon.right { right: 5px; }
+.toggle-track:not(.all) .toggle-icon.left { opacity: 0; }
+.toggle-track.all .toggle-icon.right { opacity: 0; }
+.timeline-toggle:hover .toggle-track {
+  box-shadow: 0 0 0 2px rgba(46,98,153,0.15);
+}
 
 /* ── View containers ─────────────────────────── */
 .map-wrap {

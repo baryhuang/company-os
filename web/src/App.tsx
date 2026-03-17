@@ -31,6 +31,20 @@ function AuthenticatedApp() {
   const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('gantt');
   const [peopleTab, setPeopleTab] = useState<'tree' | 'meetings'>('tree');
   const [timelineRange, setTimelineRange] = useTimelineRange();
+  const [savedRange, setSavedRange] = useState<{ startOrd: number | null; endOrd: number | null } | null>(null);
+
+  const handleResetTimeline = useCallback(() => {
+    const isFiltered = timelineRange.startOrd !== null || timelineRange.endOrd !== null;
+    if (isFiltered) {
+      // Save current range and reset to all
+      setSavedRange({ startOrd: timelineRange.startOrd, endOrd: timelineRange.endOrd });
+      setTimelineRange({ startOrd: null, endOrd: null });
+    } else if (savedRange) {
+      // Restore saved range
+      setTimelineRange(savedRange);
+      setSavedRange(null);
+    }
+  }, [timelineRange, savedRange, setTimelineRange]);
 
   const handleSwitch = useCallback((view: ViewType, dimIndex?: number) => {
     setCurrentView(view);
@@ -89,6 +103,8 @@ function AuthenticatedApp() {
               dimensions={dimensions}
               expandLevel={expandLevel}
               onExpandLevel={handleExpandLevel}
+              timelineRange={timelineRange}
+              onResetTimeline={handleResetTimeline}
             />
 
           {currentView === 'overview' && (

@@ -1,4 +1,6 @@
+import { CalendarRange, CalendarDays } from 'lucide-react';
 import type { ViewType, DimensionMeta } from '../types';
+import type { TimelineRange } from '../hooks/useTimelineCutoff';
 
 interface TopBarProps {
   currentView: ViewType;
@@ -6,9 +8,11 @@ interface TopBarProps {
   dimensions: DimensionMeta[];
   expandLevel: number;
   onExpandLevel: (level: number) => void;
+  timelineRange: TimelineRange;
+  onResetTimeline: () => void;
 }
 
-export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel }: TopBarProps) {
+export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel, timelineRange, onResetTimeline }: TopBarProps) {
   let title = 'Company Brain';
   let desc = '8 dimensions + competitive evolution';
 
@@ -34,6 +38,8 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
   }
 
   const showButtons = currentView === 'd3';
+  const showTimelineToggle = ['overview', 'vem', 'd3', 'competitor', 'okr'].includes(currentView);
+  const isFiltered = timelineRange.startOrd !== null || timelineRange.endOrd !== null;
 
   const levelButtons = [
     { label: 'Summary', value: 2 },
@@ -48,22 +54,33 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
         <h1>{title}</h1>
         <div className="desc">{desc}</div>
       </div>
-      {showButtons && (
-        <div className="actions">
-          {levelButtons.map(b => (
-            <button
-              key={b.label}
-              className={`btn${expandLevel === b.value ? ' active' : ''}`}
-              onClick={() => onExpandLevel(b.value)}
-            >
-              {b.label}
+      <div className="actions">
+        {showButtons && (
+          <>
+            {levelButtons.map(b => (
+              <button
+                key={b.label}
+                className={`btn${expandLevel === b.value ? ' active' : ''}`}
+                onClick={() => onExpandLevel(b.value)}
+              >
+                {b.label}
+              </button>
+            ))}
+            <button className="btn" onClick={() => onExpandLevel(0)}>
+              Fit View
             </button>
-          ))}
-          <button className="btn" onClick={() => onExpandLevel(0)}>
-            Fit View
-          </button>
-        </div>
-      )}
+          </>
+        )}
+        {showTimelineToggle && (
+          <div className="timeline-toggle" onClick={onResetTimeline} title={isFiltered ? 'Show all time' : 'Restore filtered range'}>
+            <div className={`toggle-track${isFiltered ? '' : ' all'}`}>
+              <div className="toggle-thumb" />
+              <CalendarRange size={12} className="toggle-icon left" />
+              <CalendarDays size={12} className="toggle-icon right" />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
