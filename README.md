@@ -26,25 +26,16 @@ So I built a system where conversations become structured knowledge, and structu
 
 ## How it works
 
+```mermaid
+flowchart TD
+    A[Voice memo / Zoom / Recording] --> B[Transcription - speaker-labeled]
+    B --> C[BubbleLab AI Workflow]
+    C --> D[Claude Cowork]
+    D --> E[InsForge - db/auth/storage]
+    H[Founder Dashboard] --> E
+    F[Linear - tasks] --> E
+    G[Chat - query knowledge] --> D
 ```
-Voice memo / Zoom meeting / recording
-        ↓
-   Transcription (speaker-labeled)
-        ↓
-   BubbleLab AI workflow
-   (syncs all files → Google Drive + S3)
-        ↓
-   OpenAgents workspace (remote Claude Cowork)
-   (meta-skill → structured dimensions)
-        ↓
-   ┌──────────┐  ┌──────────┐  ┌──────────┐
-   │ InsForge  │  │ Linear   │  │ Chat     │
-   │ (db/auth) │  │ (tasks)  │  │ (query)  │
-   └──────────┘  └──────────┘  └──────────┘
-        ↓               ↓              ↓
-   Founder dashboard (you build yours)
-```
-
 **Record** — Send a voice memo to Telegram, drop a Zoom meeting recording, or any audio file. Get a transcript back with speaker labels in under a minute.
 
 **Structure** — AI processes transcripts into your company's knowledge dimensions. Not a fixed template — the dimensions emerge from your actual conversations. A healthcare startup ends up with `market/`, `validation/`, `regulatory/`. A fintech startup gets `compliance/`, `partnerships/`, `unit-economics/`. Your company, your structure.

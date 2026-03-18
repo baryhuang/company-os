@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 520" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="inputGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="transcribeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="syncGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+    <linearGradient id="coworkGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <linearGradient id="insforgeGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="linearGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="chatGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fb923c"/>
+    </linearGradient>
+    <linearGradient id="dashGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="arrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+      <path d="M0,0 L7,2.5 L0,5" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="520" rx="16" fill="url(#bg)"/>
+
+  <!-- Row 1: Input -->
+  <g filter="shadow">
+    <rect x="180" y="28" width="360" height="48" rx="24" fill="url(#inputGrad)" opacity="0.95"/>
+    <text x="360" y="49" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Voice memo / Zoom / Recording</text>
+    <text x="360" y="64" text-anchor="middle" fill="#c7d2fe" font-size="10">Telegram bot + file upload</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="360" y1="76" x2="360" y2="102" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Row 2: Transcription -->
+  <g filter="shadow">
+    <rect x="200" y="106" width="320" height="48" rx="10" fill="url(#transcribeGrad)" opacity="0.95"/>
+    <text x="360" y="128" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">Transcription (speaker-labeled)</text>
+    <text x="360" y="143" text-anchor="middle" fill="#ddd6fe" font-size="10">AssemblyAI</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="360" y1="154" x2="360" y2="180" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Row 3: BubbleLab -->
+  <g filter="shadow">
+    <rect x="180" y="184" width="360" height="48" rx="10" fill="url(#syncGrad)" opacity="0.95"/>
+    <text x="360" y="206" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">BubbleLab AI Workflow</text>
+    <text x="360" y="222" text-anchor="middle" fill="#fce7f3" font-size="10">Syncs all files → Google Drive + S3</text>
+  </g>
+
+  <!-- Arrow -->
+  <line x1="360" y1="232" x2="360" y2="258" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Row 4: Claude Cowork -->
+  <g filter="shadow">
+    <rect x="170" y="262" width="380" height="48" rx="10" fill="url(#coworkGrad)" opacity="0.95"/>
+    <text x="360" y="284" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="700">Claude Cowork</text>
+    <text x="360" y="300" text-anchor="middle" fill="#451a03" font-size="10">Processes files → structured knowledge dimensions</text>
+  </g>
+
+  <!-- Branching: Cowork → three outputs -->
+  <line x1="200" y1="310" x2="200" y2="330" stroke="#475569" stroke-width="1.5"/>
+  <line x1="360" y1="310" x2="360" y2="330" stroke="#475569" stroke-width="1.5"/>
+  <line x1="540" y1="310" x2="540" y2="330" stroke="#475569" stroke-width="1.5"/>
+  <line x1="200" y1="330" x2="540" y2="330" stroke="#475569" stroke-width="1.5"/>
+  <line x1="200" y1="330" x2="200" y2="352" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="360" y1="330" x2="360" y2="352" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="540" y1="330" x2="540" y2="352" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Row 5: InsForge, Linear, Chat -->
+  <!-- InsForge -->
+  <g filter="shadow">
+    <rect x="112" y="356" width="176" height="48" rx="10" fill="#0f172a" stroke="url(#insforgeGrad)" stroke-width="1.5"/>
+    <text x="200" y="378" text-anchor="middle" fill="#22d3ee" font-size="13" font-weight="600">InsForge</text>
+    <text x="200" y="393" text-anchor="middle" fill="#64748b" font-size="10">db / auth / storage</text>
+  </g>
+
+  <!-- Linear -->
+  <g filter="shadow">
+    <rect x="300" y="356" width="120" height="48" rx="10" fill="#0f172a" stroke="url(#linearGrad)" stroke-width="1.5"/>
+    <text x="360" y="378" text-anchor="middle" fill="#34d399" font-size="13" font-weight="600">Linear</text>
+    <text x="360" y="393" text-anchor="middle" fill="#64748b" font-size="10">tasks</text>
+  </g>
+
+  <!-- Chat -->
+  <g filter="shadow">
+    <rect x="460" y="356" width="160" height="48" rx="24" fill="url(#chatGrad)" opacity="0.95"/>
+    <text x="540" y="378" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Chat</text>
+    <text x="540" y="393" text-anchor="middle" fill="#fff9" font-size="10">Query knowledge</text>
+  </g>
+
+  <!-- Arrows: InsForge + Linear → Dashboard -->
+  <line x1="200" y1="404" x2="200" y2="424" stroke="#475569" stroke-width="1.5"/>
+  <line x1="360" y1="404" x2="360" y2="424" stroke="#475569" stroke-width="1.5"/>
+  <line x1="200" y1="424" x2="360" y2="424" stroke="#475569" stroke-width="1.5"/>
+  <line x1="280" y1="424" x2="280" y2="442" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Row 6: Founder Dashboard -->
+  <g filter="shadow">
+    <rect x="140" y="446" width="280" height="48" rx="24" fill="url(#dashGrad)" opacity="0.95"/>
+    <text x="280" y="467" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700">Founder Dashboard</text>
+    <text x="280" y="482" text-anchor="middle" fill="#134e4a" font-size="10">You build yours</text>
+  </g>
+</svg>
