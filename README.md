@@ -34,24 +34,24 @@ Voice memo / Zoom meeting / recording
    BubbleLab AI workflow
    (syncs all files → Google Drive + S3)
         ↓
-   Claude Code meta-skill → structured dimensions
+   OpenAgents workspace (remote Claude Cowork)
+   (meta-skill → structured dimensions)
         ↓
-   ┌─────────┐  ┌─────────┐  ┌──────────┐
-   │  Write   │  │  Query  │  │ Backend  │
-   │ markdown │  │memsearch│  │ InsForge │
-   │ (truth)  │→ │ (index) │  │ (db/auth)│
-   └─────────┘  └─────────┘  └──────────┘
-        ↓            ↓
+   ┌──────────┐  ┌──────────┐  ┌──────────┐
+   │ InsForge  │  │ Linear   │  │ Chat     │
+   │ (db/auth) │  │ (tasks)  │  │ (query)  │
+   └──────────┘  └──────────┘  └──────────┘
+        ↓               ↓              ↓
    Founder dashboard (you build yours)
 ```
 
-**Record** — Send a voice memo to Telegram, or drop a meeting recording. Get a transcript back with speaker labels in under a minute.
+**Record** — Send a voice memo to Telegram, drop a Zoom meeting recording, or any audio file. Get a transcript back with speaker labels in under a minute.
 
 **Structure** — AI processes transcripts into your company's knowledge dimensions. Not a fixed template — the dimensions emerge from your actual conversations. A healthcare startup ends up with `market/`, `validation/`, `regulatory/`. A fintech startup gets `compliance/`, `partnerships/`, `unit-economics/`. Your company, your structure.
 
-**Query** — Ask questions across everything your team has ever discussed. "What did we decide about pricing?" "What did the customer say about onboarding?" "What did the advisor say about our go-to-market?" Semantic search finds it.
+**Ask** — Team members chat with the knowledge base directly. No need to open a terminal or remember where things are — just ask "who did we talk to about X?" or "what did we decide about Y?" and get answers grounded in your actual conversations. Powered by [OpenAgents](https://openagents.com) workspace.
 
-**Execute** — Decisions and action items flow into Linear. Every task traces back to the conversation where it originated.
+**Execute** — Tasks sync from Linear into the dashboard. Search across all tasks semantically to find what's relevant.
 
 **See** — Each team member builds their own dashboard. The CEO sees the vision map and fundraise pipeline. The COO sees the facility kanban and pilot tracker. The content lead sees the scenario library. Same data, different views.
 
@@ -61,11 +61,11 @@ Voice memo / Zoom meeting / recording
 
 **Clarity over consensus.** The system doesn't just record meetings — it tracks *who decided what, when, and why*. Six months from now, you can trace any strategic decision back to the exact conversation.
 
-**Deliberate documentation.** Decisions, learnings, and direction live somewhere visible — not in someone's head, not in a Slack thread that scrolled away. Markdown files, git-tracked, human-readable.
+**Deliberate documentation.** Decisions, learnings, and direction live somewhere visible — not in someone's head, not in a Slack thread that scrolled away. Structured data, searchable, always up to date.
 
 **Your dimensions, not ours.** No predefined schema. No "fill in these 12 boxes." The knowledge structure emerges from your conversations, the way your team actually thinks about your business.
 
-**Self-hosted. Your conversations stay yours.** Your most sensitive recordings — investor negotiations, co-founder disagreements, customer deal terms — never live on someone else's server. Run it with your own API keys.
+**Your API keys, your data.** Your most sensitive recordings — investor negotiations, co-founder disagreements, customer deal terms — are processed with your own API keys.
 
 ---
 
@@ -73,14 +73,13 @@ Voice memo / Zoom meeting / recording
 
 | Layer | What it does | How |
 |-------|-------------|-----|
-| **Input** | Voice memos, meeting recordings, Zoom calls, documents | Telegram bot, Zoom integration |
+| **Input** | Voice memos, Zoom meetings, recordings, documents | Telegram bot + BubbleLab |
 | **Transcription** | Speaker-labeled transcripts | AssemblyAI |
 | **File sync** | All files centralized in one place | [BubbleLab](https://github.com/bubblelabai/BubbleLab) workflows → Google Drive + S3 |
-| **Processing** | Conversations → structured knowledge | Claude Code + meta-skill |
+| **Processing** | Conversations → structured knowledge | [OpenAgents](https://openagents.com) workspace (remote Claude Cowork) |
+| **Chat** | Team members ask questions about the knowledge base | [OpenAgents](https://openagents.com) chat interface |
 | **Backend** | Database, auth, storage, API | [InsForge](https://insforge.dev) — AI-native backend |
-| **Storage** | Markdown filesystem (source of truth) | Git-tracked `.md` files |
-| **Retrieval** | Semantic search across all knowledge | memsearch (vector + BM25) |
-| **Execution** | Action items → task tracking | Linear integration |
+| **Execution** | Task sync + semantic search | Linear → InsForge (edge function) |
 | **Visualization** | Per-user dashboards | React components, vibe-coded |
 
 ---
@@ -94,9 +93,8 @@ Record conversations, get transcripts. This is your input layer.
 ```bash
 git clone https://github.com/baryhuang/company-os.git
 cd company-os
-cp .env.example .env
-# Add your API keys (see below)
-uv run telegram_bot.py
+# Set environment variables (see API keys below)
+uv run server/telegram_bot.py
 ```
 
 Send a voice memo to your Telegram bot. Get a speaker-labeled transcript back.
@@ -132,10 +130,6 @@ Get started with just two free API keys: [Telegram BotFather](https://t.me/BotFa
 docker compose up -d
 ```
 
-**Railway** (one click):
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/...)
-
 Runs anywhere Docker runs — a $5 VPS, a Raspberry Pi, or your laptop. No inbound ports needed.
 
 ---
@@ -147,12 +141,6 @@ I'm a startup CTO building [PeakMojo](https://peakmojo.com) — AI for healthcar
 This is the actual system my team uses to run our company. We've processed 50+ days of meeting transcripts into 16 knowledge dimensions with 800+ structured nodes. Every strategic decision we've made traces back to a conversation.
 
 I open-source it because founders should show their work, not just talk about AI.
-
----
-
-## Technical details
-
-See [TECHNICAL.md](TECHNICAL.md) for architecture, configuration, and deployment details.
 
 ---
 
