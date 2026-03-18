@@ -49,7 +49,7 @@ flowchart TD
 
 **Structure** — AI processes transcripts into your company's knowledge dimensions. Not a fixed template — the dimensions emerge from your actual conversations. A healthcare startup ends up with `market/`, `validation/`, `regulatory/`. A fintech startup gets `compliance/`, `partnerships/`, `unit-economics/`. Your company, your structure.
 
-**Ask** — Team members chat with the knowledge base directly. No need to open a terminal or remember where things are — just ask "who did we talk to about X?" or "what did we decide about Y?" and get answers grounded in your actual conversations. Powered by [OpenAgents](https://openagents.com) workspace.
+**Ask** — Team members chat with the knowledge base directly. No need to open a terminal or remember where things are — just ask "who did we talk to about X?" or "what did we decide about Y?" and get answers grounded in your actual conversations. [OpenAgents](https://openagents.com) hosts the Claude Cowork in the cloud and provides both the admin operation interface and the team chat interface.
 
 **Execute** — Tasks sync from Linear into the dashboard. Search across all tasks semantically to find what's relevant.
 
@@ -76,8 +76,7 @@ flowchart TD
 | **Input** | Voice memos, Zoom meetings, recordings, documents | Telegram bot + BubbleLab |
 | **Transcription** | Speaker-labeled transcripts | AssemblyAI |
 | **File sync** | All files centralized in one place | [BubbleLab](https://github.com/bubblelabai/BubbleLab) workflows → Google Drive + S3 |
-| **Processing** | Conversations → structured knowledge | [OpenAgents](https://openagents.com) workspace (remote Claude Cowork) |
-| **Chat** | Team members ask questions about the knowledge base | [OpenAgents](https://openagents.com) chat interface |
+| **Processing + Chat** | Conversations → structured knowledge; team Q&A | [OpenAgents](https://openagents.com) — hosts Claude Cowork in the cloud, provides admin operation + team chat |
 | **Backend** | Database, auth, storage, API | [InsForge](https://insforge.dev) — AI-native backend |
 | **Execution** | Task sync + semantic search | Linear → InsForge (edge function) |
 | **Visualization** | Per-user dashboards | React components, vibe-coded |
