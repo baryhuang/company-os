@@ -81,6 +81,13 @@ export function LandingPage() {
           <li><a href="#how">How it works</a></li>
           <li><a href="#features">Features</a></li>
           <li><a href="#quickstart">Get Started</a></li>
+          <li>
+            <a href="https://github.com/baryhuang/company-os" className="gh-stars-badge" target="_blank" rel="noopener noreferrer">
+              <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+              <svg height="14" width="14" viewBox="0 0 16 16" fill="currentColor" style={{opacity: 0.7}}><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
+              <span>Star</span>
+            </a>
+          </li>
           <li>{user ? <Link to="/dashboard" className="nav-cta">Dashboard</Link> : <SignInButton className="nav-cta">Login</SignInButton>}</li>
         </ul>
       </nav>
@@ -100,7 +107,7 @@ export function LandingPage() {
                 Every founding team makes their best decisions in conversation. Then loses them. Company OS is the system of record for verbal decisions, customer insights, and strategic pivots.
               </p>
               <div className="hero-actions">
-                {user ? <Link to="/dashboard" className="btn-primary">Go to Dashboard →</Link> : <SignInButton className="btn-primary">Get started free →</SignInButton>}
+                <a href="https://github.com/baryhuang/company-os" className="btn-primary">⭐ Star on GitHub</a>
                 <a href="#how" className="btn-ghost">See how it works</a>
               </div>
               <div className="hero-tags">
@@ -512,8 +519,7 @@ export function LandingPage() {
           <h2>I built it. I open-sourced it.<br />Now it's yours.</h2>
           <p>Production code my 5-person founding team runs daily. 50+ days of transcripts processed into 16 knowledge dimensions. Star the repo or fork it — that's what open source is for.</p>
           <div className="cta-actions">
-            {user ? <Link to="/dashboard" className="btn-primary">Go to Dashboard →</Link> : <SignInButton className="btn-primary">Get started →</SignInButton>}
-            <a href="https://github.com/baryhuang/company-os" className="btn-ghost">⭐ Star on GitHub</a>
+            <a href="https://github.com/baryhuang/company-os" className="btn-primary">⭐ Star on GitHub</a>
           </div>
         </div>
       </div>
