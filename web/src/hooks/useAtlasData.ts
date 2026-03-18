@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchDimensions, fetchDimensionData, fetchProgressData, fetchLandscapeData, fetchAppointmentsData, initializeUserData } from '../api';
+import { fetchDimensions, fetchDimensionData, fetchProgressData, fetchLandscapeData, fetchAppointmentsData } from '../api';
 import type { DimensionMeta, TreeNode, LandscapeData, AppointmentsData } from '../types';
 
 interface AtlasData {
@@ -64,17 +64,9 @@ export function useAtlasData(userId: string): AtlasData {
     async function load() {
       try {
         await loadData();
-      } catch {
-        // First load failed — initialize user data from defaults and retry
-        if (cancelled) return;
-        try {
-          await initializeUserData(userId);
-          if (cancelled) return;
-          await loadData();
-        } catch (retryErr) {
-          if (!cancelled) {
-            setError(retryErr instanceof Error ? retryErr.message : String(retryErr));
-          }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
         }
       } finally {
         if (!cancelled) setLoading(false);

@@ -164,6 +164,8 @@ async def atlas_put_data(name: str, request: Request):
     if not _ATLAS_NAME_RE.match(name):
         raise HTTPException(status_code=400, detail="Invalid resource name")
     body = await request.json()
+    if not isinstance(body, dict) or not body.get("user_id"):
+        raise HTTPException(status_code=400, detail="user_id is required")
     ATLAS_DATA_DIR.mkdir(parents=True, exist_ok=True)
     data_file = ATLAS_DATA_DIR / f"{name}.json"
     data_file.write_text(json.dumps(body, ensure_ascii=False, indent=2))

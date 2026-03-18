@@ -44,6 +44,15 @@
   padding: 10px 16px;
   border: 1px solid #999;
 }
+.vem-section-row .vem-tag {
+  font-size: 8px;
+  background: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.9);
+}
+.vem-section-row .vem-date-inline {
+  color: rgba(255,255,255,0.6);
+  font-size: 9px;
+}
 
 /* Content rows */
 .vem-content-row td {
@@ -65,6 +74,34 @@
   width: 75%;
   background: #fff;
   color: #333;
+}
+
+/* Full-width label (no value cell) */
+.vem-label-full {
+  width: 100% !important;
+}
+
+/* Subtitle under label (e.g. "(the round after next)") */
+.vem-label-subtitle {
+  font-weight: 400;
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* Quotes inside value cells */
+.vem-quotes {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+  list-style: none;
+}
+.vem-quotes li {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-style: italic;
+  color: #555;
+  padding-left: 12px;
+  border-left: 2px solid #ccc;
 }
 
 /* Sub-label (depth 3+ parent names rendered inside value cell) */
