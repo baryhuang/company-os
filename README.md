@@ -8,6 +8,14 @@ Code goes in GitHub. Tasks go in Linear. But the verbal decisions, customer insi
 
 Company OS is that system of record.
 
+### Built with
+
+[**BubbleLab**](https://github.com/bubblelabai/BubbleLab) — AI workflow engine for file sync, transcription routing, and processing pipelines
+
+[**OpenAgents**](https://openagents.org) — Hosts Claude Cowork in the cloud. Admin operation interface + team chat with your knowledge base
+
+[**InsForge**](https://insforge.dev) — AI-native backend: database, auth, storage, edge functions
+
 ---
 
 ## Why this exists
