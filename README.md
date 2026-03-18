@@ -32,9 +32,18 @@ flowchart TD
     B --> C[BubbleLab AI Workflow]
     C --> D[Claude Cowork]
     D --> E[InsForge - db/auth/storage]
-    H[Founder Dashboard] --> E
     F[Linear - tasks] --> E
-    G[Chat - query knowledge] --> D
+    G[OpenAgents] --> D
+
+    subgraph UI["User Interfaces"]
+        H[Founder Dashboard]
+        I[Admin Operation]
+        J[Chat with Team]
+    end
+
+    H --> E
+    I --> G
+    J --> G
 ```
 **Record** — Send a voice memo to Telegram, drop a Zoom meeting recording, or any audio file. Get a transcript back with speaker labels in under a minute.
 
