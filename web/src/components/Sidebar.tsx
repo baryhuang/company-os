@@ -71,7 +71,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
     <aside className={`sidebar${open ? ' open' : ''}`}>
       <div className="sidebar-header">
         <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <h2 className="logo">{'\u{1F9E0}'} Company Brain</h2>
+          <h2 className="logo">{'\u{1F9E0}'} Company OS</h2>
         </Link>
         {workspaceName && <div className="sub">{workspaceName}</div>}
         <div className="sub">Feb 23 {'\u2013'} Mar 11, 2026</div>

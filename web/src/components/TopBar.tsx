@@ -13,7 +13,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel, timelineRange, onResetTimeline }: TopBarProps) {
-  let title = 'Company Brain';
+  let title = 'Company OS';
   let desc = '8 dimensions + competitive evolution';
 
   if (currentView === 'overview') {

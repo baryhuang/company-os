@@ -76,7 +76,7 @@ function AuthenticatedApp() {
   }
 
   if (loading) {
-    return <div className="loading-screen">Loading your Company Brain...</div>;
+    return <div className="loading-screen">Loading your Company OS...</div>;
   }
 
   if (error) {
