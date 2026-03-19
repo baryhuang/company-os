@@ -307,6 +307,62 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     }
   }, [userId, channelName]);
 
+  // Convert raw events to ChatMessages
+  const eventsToMessages = useCallback((events: any[]): ChatMessage[] => {
+    return events.map((e: any) => {
+      const payload = e.payload || {};
+      const msgType = payload.message_type || 'chat';
+      return {
+        id: e.id,
+        senderType: e.source.startsWith('human:') ? 'human' as const : 'agent' as const,
+        senderName: e.source.replace(/^(openagents:|human:)/, ''),
+        content: payload.content || '',
+        messageType: msgType === 'thinking' ? 'thinking' : msgType === 'status' ? 'status' : 'chat',
+        timestamp: e.timestamp,
+      };
+    });
+  }, []);
+
+  // Load full message history for an existing channel (no `after`, sort=asc)
+  const loadHistory = useCallback(async (channel: string) => {
+    if (!config) return;
+    try {
+      let allMsgs: ChatMessage[] = [];
+      let cursor: string | undefined;
+      let hasMore = true;
+
+      while (hasMore) {
+        const params = new URLSearchParams({
+          network: config.workspaceId,
+          channel,
+          type: 'workspace.message',
+          sort: 'asc',
+          limit: '200',
+        });
+        if (cursor) params.set('after', cursor);
+
+        const result = await apiRequest<{ events: any[]; has_more: boolean }>(
+          `/v1/events?${params}`, config,
+        );
+
+        const msgs = eventsToMessages(result.events);
+        allMsgs = [...allMsgs, ...msgs];
+        hasMore = result.has_more && result.events.length > 0;
+        if (result.events.length > 0) {
+          cursor = result.events[result.events.length - 1].id;
+        }
+      }
+
+      if (allMsgs.length > 0) {
+        lastSeenIdRef.current = allMsgs[allMsgs.length - 1].id;
+        setMessages(allMsgs);
+        savePendingRef.current = true;
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+  }, [config, eventsToMessages]);
+
   // Create a brand-new channel (used on first open or "New Chat")
   const createNewChannel = useCallback(async () => {
     if (!config) return;
@@ -379,9 +435,12 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     try {
       const saved = await loadChatThread(userId);
       if (saved && saved.channelName) {
-        setChannelName(saved.channelName);
-        lastSeenIdRef.current = saved.lastSeenId;
         masterAgentRef.current = saved.masterAgent;
+        // Reset cursor so history loads from the beginning
+        lastSeenIdRef.current = null;
+        setChannelName(saved.channelName);
+        // Load full message history before starting poll loop
+        await loadHistory(saved.channelName);
         setInitializing(false);
         return;
       }
@@ -390,7 +449,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     }
     setInitializing(false);
     await createNewChannel();
-  }, [config, channelName, userId, createNewChannel]);
+  }, [config, channelName, userId, createNewChannel, loadHistory]);
 
   // Handle "New Chat" — clear everything and create fresh channel
   const handleNewChat = useCallback(async () => {
@@ -408,7 +467,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     await createNewChannel();
   }, [userId, createNewChannel]);
 
-  // Poll for messages
+  // Poll for new messages (incremental, uses `after` cursor)
   const poll = useCallback(async () => {
     if (!config || !channelName) return;
     try {
@@ -425,24 +484,12 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
       );
 
       if (result.events.length > 0) {
-        const newMsgs: ChatMessage[] = result.events.map((e: any) => {
-          const payload = e.payload || {};
-          const msgType = payload.message_type || 'chat';
-          return {
-            id: e.id,
-            senderType: e.source.startsWith('human:') ? 'human' as const : 'agent' as const,
-            senderName: e.source.replace(/^(openagents:|human:)/, ''),
-            content: payload.content || '',
-            messageType: msgType === 'thinking' ? 'thinking' : msgType === 'status' ? 'status' : 'chat',
-            timestamp: e.timestamp,
-          };
-        });
+        const newMsgs = eventsToMessages(result.events);
 
         lastSeenIdRef.current = newMsgs[newMsgs.length - 1].id;
         savePendingRef.current = true;
 
         setMessages((prev) => {
-          const ids = new Set(prev.map((m) => m.id));
           // Remove optimistic messages once real ones arrive
           const withoutOptimistic = prev.filter((m) => !m.id.startsWith('opt-') || !newMsgs.some(
             (n) => n.senderType === m.senderType && n.content === m.content
@@ -459,7 +506,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     } catch (err) {
       console.error('Poll error:', err);
     }
-  }, [config, channelName]);
+  }, [config, channelName, eventsToMessages]);
 
   // Fixed 5s polling loop
   useEffect(() => {
