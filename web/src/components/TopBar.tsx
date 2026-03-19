@@ -18,9 +18,9 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
   let title = 'Company OS';
   let desc = '8 dimensions + competitive evolution';
 
-  if (currentView === 'overview') {
-    title = 'Executive Overview';
-    desc = 'Timeline view across all decision dimensions';
+  if (currentView === 'todo') {
+    title = 'Dashboard';
+    desc = 'Action items & follow-ups';
   } else if (currentView === 'd3' && dimensions[currentDimIndex]) {
     const dim = dimensions[currentDimIndex];
     title = dim.title;
@@ -40,7 +40,7 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
   }
 
   const showButtons = currentView === 'd3';
-  const showTimelineToggle = ['overview', 'vem', 'd3', 'competitor', 'okr'].includes(currentView);
+  const showTimelineToggle = ['todo', 'vem', 'd3', 'competitor', 'okr'].includes(currentView);
   const isFiltered = timelineRange.startOrd !== null || timelineRange.endOrd !== null;
 
   const levelButtons = [

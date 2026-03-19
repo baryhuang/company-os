@@ -1676,6 +1676,96 @@ body::before {
   font-size: 14px; color: var(--text3);
 }
 
+/* ── Todo View ──────────────────────────────── */
+.todo-view {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+.todo-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.todo-title {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 400;
+  color: var(--text); letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+.todo-summary {
+  font-size: 12px; color: var(--text3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+}
+.todo-list {
+  flex: 1; overflow-y: auto;
+  padding: 16px 24px 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(45,122,62,0.04) 0%, transparent 60%),
+    linear-gradient(160deg, #f6f3ec 0%, #ede8df 30%, #f4f1eb 60%, #f0ece4 100%);
+}
+.todo-category {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.todo-category-header {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 12px 16px;
+  border: none; background: none;
+  cursor: pointer; font-family: var(--font-body);
+  transition: background 0.15s;
+}
+.todo-category-header:hover { background: var(--surface2); }
+.todo-chevron {
+  color: var(--text3); flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.todo-chevron.expanded { transform: rotate(90deg); }
+.todo-category-icon { color: var(--text2); flex-shrink: 0; }
+.todo-category-name {
+  font-size: 13px; font-weight: 600;
+  color: var(--text); flex: 1; text-align: left;
+}
+.todo-category-count {
+  font-size: 10px; font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  background: var(--surface2);
+  padding: 1px 8px; border-radius: 8px;
+  letter-spacing: 0.3px;
+}
+.todo-category-items {
+  border-top: 1px solid var(--border);
+}
+.todo-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 16px 10px 42px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.todo-item:last-child { border-bottom: none; }
+.todo-item:hover { background: var(--surface2); }
+.todo-icon { flex-shrink: 0; margin-top: 1px; }
+.todo-icon.done { color: var(--green); }
+.todo-icon.pending { color: var(--orange); }
+.todo-icon.default { color: var(--text3); }
+.todo-item-content {
+  flex: 1; min-width: 0;
+  display: flex; align-items: baseline; gap: 8px;
+  flex-wrap: wrap;
+}
+.todo-item-name {
+  font-size: 13px; color: var(--text);
+  line-height: 1.5; word-break: break-word;
+}
+.todo-item-date {
+  font-size: 10px; color: var(--text3);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
 /* ── Selection ───────────────────────────────── */
 ::selection { background: var(--green-light); color: var(--green); }
 
@@ -1731,7 +1821,11 @@ body::before {
   .gantt-body,
   .overview-grid,
   .task-search-panel,
-  .settings-scroll { padding: 16px; }
+  .settings-scroll,
+  .todo-list { padding: 16px; }
+  .todo-header { padding: 16px; }
+  .todo-title { font-size: 17px; }
+  .todo-item { padding-left: 36px; }
   .gantt-header { padding: 0 16px; }
 
   /* ── View tabs ── */
