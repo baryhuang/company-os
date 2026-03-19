@@ -42,9 +42,13 @@
 }
 .chat-panel.fullscreen {
   bottom: 0; right: 0;
-  width: 100vw; height: 100vh;
+  width: 100vw; height: 100vh; height: 100dvh;
   border-radius: 0;
   animation: chatExpand 0.2s ease;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 @keyframes chatSlideUp {
   from { opacity: 0; transform: translateY(16px) scale(0.96); }
@@ -382,7 +386,15 @@
 /* ── Mobile ───────────────────────────────── */
 @media (max-width: 767px) {
   .chat-fab { bottom: 16px; right: 16px; width: 48px; height: 48px; }
-  .chat-panel { bottom: 0; right: 0; width: 100vw; height: 100vh; border-radius: 0; }
+  .chat-panel {
+    bottom: 0; right: 0; width: 100vw;
+    height: 100vh; height: 100dvh;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
   .chat-steps { padding-left: 16px; }
   .breathing-dots { padding-left: 24px; }
 }

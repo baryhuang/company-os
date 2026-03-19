@@ -48,7 +48,7 @@ body::before {
 }
 
 /* ── Layout ──────────────────────────────────── */
-.app { display: flex; height: 100vh; }
+.app { display: flex; height: 100vh; height: 100dvh; }
 
 /* ── Sidebar ─────────────────────────────────── */
 .sidebar {
@@ -688,7 +688,7 @@ body::before {
   .sidebar {
     position: fixed; left: -260px; z-index: 250;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    height: 100vh;
+    height: 100vh; height: 100dvh;
     box-shadow: var(--shadow-xl);
   }
   .sidebar.open { left: 0; }
