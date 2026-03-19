@@ -227,8 +227,18 @@ function getAgentInitials(name: string): string {
 
 // ── Main Widget ──
 
-export function ChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+interface ChatWidgetProps {
+  isOpen?: boolean;
+  onToggle?: (open: boolean) => void;
+}
+
+export function ChatWidget({ isOpen: controlledOpen, onToggle }: ChatWidgetProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setIsOpen = useCallback((open: boolean) => {
+    if (onToggle) onToggle(open);
+    else setInternalOpen(open);
+  }, [onToggle]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');

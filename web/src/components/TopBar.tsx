@@ -1,4 +1,4 @@
-import { CalendarRange, CalendarDays } from 'lucide-react';
+import { CalendarRange, CalendarDays, Menu, MessageCircle } from 'lucide-react';
 import type { ViewType, DimensionMeta } from '../types';
 import type { TimelineRange } from '../hooks/useTimelineCutoff';
 
@@ -10,9 +10,11 @@ interface TopBarProps {
   onExpandLevel: (level: number) => void;
   timelineRange: TimelineRange;
   onResetTimeline: () => void;
+  onMenuToggle?: () => void;
+  onChatToggle?: () => void;
 }
 
-export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel, timelineRange, onResetTimeline }: TopBarProps) {
+export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel, timelineRange, onResetTimeline, onMenuToggle, onChatToggle }: TopBarProps) {
   let title = 'Company OS';
   let desc = '8 dimensions + competitive evolution';
 
@@ -50,7 +52,12 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
 
   return (
     <div className="topbar">
-      <div>
+      {onMenuToggle && (
+        <button className="topbar-mobile-btn menu-btn" onClick={onMenuToggle} aria-label="Menu">
+          <Menu size={18} />
+        </button>
+      )}
+      <div className="topbar-title-block">
         <h1>{title}</h1>
         <div className="desc">{desc}</div>
       </div>
@@ -79,6 +86,11 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
               <CalendarDays size={12} className="toggle-icon right" />
             </div>
           </div>
+        )}
+        {onChatToggle && (
+          <button className="topbar-mobile-btn chat-btn" onClick={onChatToggle} aria-label="Chat">
+            <MessageCircle size={18} />
+          </button>
         )}
       </div>
     </div>

@@ -3,7 +3,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 500;
+  z-index: 10000;
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -28,7 +28,7 @@
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 500;
+  z-index: 10000;
   width: 420px;
   height: 580px;
   display: flex;

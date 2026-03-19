@@ -1044,3 +1044,200 @@
 .landing-page ::-webkit-scrollbar { width: 6px; }
 .landing-page ::-webkit-scrollbar-track { background: var(--navy); }
 .landing-page ::-webkit-scrollbar-thumb { background: rgba(204,120,92,0.3); border-radius: 3px; }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE RESPONSIVE (<768px)
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  .landing-page { font-size: 15px; }
+
+  /* ── Nav ── */
+  .landing-page nav {
+    padding: 0 1rem;
+    height: 56px;
+  }
+  .landing-page .nav-links {
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .landing-page .nav-links::-webkit-scrollbar { display: none; }
+  /* Hide text links on mobile, keep GitHub + CTA */
+  .landing-page .nav-links li:nth-child(1),
+  .landing-page .nav-links li:nth-child(2),
+  .landing-page .nav-links li:nth-child(3),
+  .landing-page .nav-links li:nth-child(4) {
+    display: none;
+  }
+  .landing-page .nav-links li:nth-child(5),
+  .landing-page .nav-links li:nth-child(6) {
+    flex-shrink: 0;
+  }
+  .landing-page .nav-links {
+    gap: 0.75rem;
+  }
+  .landing-page .gh-stars-badge span { display: none; }
+  .landing-page .gh-stars-badge { padding: 0.35rem 0.6rem; }
+
+  /* ── Container ── */
+  .landing-page .container { padding: 0 1.25rem; }
+
+  /* ── Hero ── */
+  .landing-page #hero {
+    min-height: auto;
+    padding-top: 56px;
+  }
+  .landing-page .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding: 3rem 0 2.5rem;
+  }
+  .landing-page h1 { font-size: 2.2rem; }
+  .landing-page .hero-desc {
+    font-size: 0.95rem;
+    max-width: 100%;
+  }
+  .landing-page .hero-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+  .landing-page .btn-primary,
+  .landing-page .btn-ghost {
+    width: 100%;
+    justify-content: center;
+    padding: 0.85rem 1.4rem;
+  }
+  .landing-page .hero-tags { gap: 0.4rem; }
+  .landing-page .tag { font-size: 0.68rem; padding: 0.2rem 0.5rem; }
+
+  /* Hero visual card */
+  .landing-page .hero-visual { margin: 0 -0.5rem; }
+  .landing-page .waveform { gap: 2px; height: 36px; }
+  .landing-page .t-line { gap: 0.5rem; }
+  .landing-page .t-text { font-size: 0.75rem; }
+  .landing-page .t-time { font-size: 0.62rem; }
+
+  /* ── Demo ── */
+  .landing-page #demo { padding: 4rem 0; }
+  .landing-page .demo-layout { margin-top: 2rem; }
+  .landing-page .video-embed {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  /* ── Sections common ── */
+  .landing-page h2 { font-size: 1.6rem; }
+  .landing-page #problem,
+  .landing-page #brain,
+  .landing-page #skills,
+  .landing-page #how,
+  .landing-page #features,
+  .landing-page #quickstart,
+  .landing-page #dashboard { padding: 4rem 0; }
+
+  /* ── Problem / Solution ── */
+  .landing-page .two-col {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    margin-top: 2rem;
+  }
+  .landing-page .prob-card,
+  .landing-page .sol-card { padding: 1.25rem; }
+  .landing-page .step-text { font-size: 0.82rem; }
+
+  /* ── Brain ── */
+  .landing-page .brain-layout {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    margin-top: 2rem;
+  }
+  .landing-page .brain-center { padding: 1.25rem; }
+  .landing-page .brain-center h3 { font-size: 1.05rem; }
+  .landing-page .loop-step { font-size: 0.78rem; }
+  .landing-page .brain-nodes { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+  /* ── Skills ── */
+  .landing-page .skills-header {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .landing-page .skills-stat { text-align: left; }
+  .landing-page .stat-num { font-size: 3rem; }
+  .landing-page .skills-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── How it works ── */
+  .landing-page .steps-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  .landing-page .steps-grid::before { display: none; }
+  .landing-page .how-step {
+    flex-direction: row;
+    text-align: left;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  .landing-page .step-circle {
+    width: 44px; height: 44px;
+    font-size: 1rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  /* ── Features ── */
+  .landing-page .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  .landing-page .feat-card { padding: 1.25rem; }
+
+  /* ── Dashboard ── */
+  .landing-page .dashboard-img { margin-top: 2rem !important; border-radius: 10px; }
+
+  /* ── CTA Banner ── */
+  .landing-page .cta-banner { padding: 3rem 0; }
+  .landing-page .cta-banner h2 { font-size: 1.4rem; }
+  .landing-page .cta-banner p { font-size: 0.9rem; }
+  .landing-page .cta-actions { flex-direction: column; }
+  .landing-page .cta-actions .btn-primary { width: 100%; justify-content: center; }
+
+  /* ── Quickstart ── */
+  .landing-page .quick-layout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  .landing-page .code-body {
+    font-size: 0.68rem;
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  /* ── Footer ── */
+  .landing-page .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .landing-page .footer-links { gap: 1.25rem; flex-wrap: wrap; }
+
+  /* ── Compat bar ── */
+  .landing-page .compat-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  .landing-page .compat-tags { gap: 0.4rem; }
+  .landing-page .compat-tag { font-size: 0.68rem; }
+}

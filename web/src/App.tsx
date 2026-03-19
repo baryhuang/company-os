@@ -31,6 +31,7 @@ function AuthenticatedApp() {
   const [expandLevel, setExpandLevel] = useState(-1);
   const [fitRequest, setFitRequest] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('gantt');
   const [peopleTab, setPeopleTab] = useState<'tree' | 'meetings'>('tree');
   const [timelineRange, setTimelineRange] = useTimelineRange();
@@ -92,9 +93,6 @@ function AuthenticatedApp() {
 
   return (
     <>
-      <button className="mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-        {'\u2630'}
-      </button>
       <div className={`sidebar-backdrop${sidebarOpen ? ' visible' : ''}`} onClick={() => setSidebarOpen(false)} />
       <div className="app">
         <Sidebar
@@ -115,6 +113,8 @@ function AuthenticatedApp() {
               onExpandLevel={handleExpandLevel}
               timelineRange={timelineRange}
               onResetTimeline={handleResetTimeline}
+              onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+              onChatToggle={() => setChatOpen(!chatOpen)}
             />
 
           {currentView === 'overview' && (
@@ -186,7 +186,7 @@ function AuthenticatedApp() {
 
         </div>
       </div>
-      <ChatWidget />
+      <ChatWidget isOpen={chatOpen} onToggle={setChatOpen} />
     </>
   );
 }

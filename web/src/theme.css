@@ -66,7 +66,7 @@ body::before {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px;
+  padding-bottom: 80px;
 }
 
 /* Decorative top accent line */
@@ -223,6 +223,26 @@ body::before {
   margin-top: 2px;
   letter-spacing: 0.2px;
 }
+/* Mobile-only buttons in topbar (hidden on desktop) */
+.topbar-mobile-btn {
+  display: none;
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.topbar-mobile-btn:hover {
+  background: var(--green-light);
+  color: var(--green);
+  border-color: var(--green);
+}
+.topbar-title-block { flex: 1; min-width: 0; }
+
 .topbar .actions {
   margin-left: auto;
   display: flex; gap: 6px;
@@ -1664,19 +1684,34 @@ body::before {
    ══════════════════════════════════════════════ */
 @media (max-width: 767px) {
 
-  /* ── Mobile toggle ── */
-  .mobile-toggle { width: 44px; height: 44px; font-size: 16px; }
+  /* ── Hide old mobile toggle (now in topbar) ── */
+  .mobile-toggle { display: none !important; }
 
   /* ── TopBar ── */
   .topbar {
-    flex-wrap: wrap; padding: 10px 16px; gap: 6px;
+    padding: 10px 12px; gap: 8px;
     min-height: auto;
   }
-  .topbar > div:first-child { flex: 1 1 100%; }
-  .topbar h1 { font-size: 16px; }
-  .topbar .desc { font-size: 10px; }
-  .topbar .actions { margin-left: 0; gap: 4px; flex-wrap: wrap; }
-  .topbar .btn { padding: 8px 12px; min-height: 36px; font-size: 10px; }
+  .topbar-mobile-btn { display: flex; }
+  .topbar-mobile-btn.chat-btn {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+  }
+  .topbar-mobile-btn.chat-btn:hover {
+    background: var(--green);
+    color: #fff;
+    opacity: 0.9;
+  }
+  .topbar-title-block { flex: 1; min-width: 0; }
+  .topbar h1 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .desc { font-size: 10px; display: none; }
+  .topbar .actions { margin-left: 0; gap: 4px; }
+  .topbar .btn { display: none; }
+  .topbar .timeline-toggle { display: none; }
+
+  /* ── Hide chat FAB on mobile (now in topbar) ── */
+  .chat-fab { display: none !important; }
 
   /* ── Timeline bar ── */
   .timeline-bar { padding: 10px 16px; gap: 8px; }
