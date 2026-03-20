@@ -119,7 +119,7 @@ function AuthenticatedApp() {
             />
 
           {currentView === 'todo' && tasksData && (
-            <TodoView treeData={tasksData} timelineRange={timelineRange} onTimelineRangeChange={setTimelineRange} />
+            <TodoView treeData={tasksData} userId={userId} timelineRange={timelineRange} onTimelineRangeChange={setTimelineRange} />
           )}
 
           {currentView === 'conversations' && conversationsData && (

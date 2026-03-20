@@ -1228,6 +1228,45 @@ body::before {
 
 .task-results { display: flex; flex-direction: column; gap: 10px; }
 
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.task-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.task-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.task-table tbody tr:hover { background: var(--surface); }
+.task-table-id { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text3); white-space: nowrap; }
+.task-table-title { font-weight: 500; color: var(--text1); max-width: 340px; }
+.task-table-desc { display: block; font-size: 12px; color: var(--text3); font-weight: 400; margin-top: 2px; line-height: 1.3; }
+.task-table-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.task-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  white-space: nowrap;
+}
+.task-table-project { color: var(--text2); white-space: nowrap; }
+.task-table-assignee { color: var(--text2); white-space: nowrap; }
+.task-table-date { color: var(--text3); white-space: nowrap; font-size: 12px; }
+
 .task-loading, .task-empty {
   text-align: center;
   padding: 32px;
@@ -1848,6 +1887,7 @@ body::before {
 .todo-icon { flex-shrink: 0; margin-top: 1px; }
 .todo-icon.done { color: var(--green); }
 .todo-icon.pending { color: var(--orange); }
+.todo-icon.pending-status { color: var(--orange); }
 .todo-icon.excluded { color: var(--text3); opacity: 0.5; }
 .todo-icon.default { color: var(--text3); }
 .todo-item-content {
@@ -1892,6 +1932,96 @@ body::before {
   font-size: 11px; color: var(--text3);
   line-height: 1.5; margin-top: 2px;
 }
+
+/* ── Todo Table ──────────────────────────────── */
+.todo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  table-layout: fixed;
+}
+.todo-table thead th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.todo-table-row td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.todo-table-row:last-child td { border-bottom: none; }
+.todo-table-row:hover { background: var(--surface2); }
+.todo-table-row.done { opacity: 0.55; }
+.todo-table-row.done .todo-table-name { text-decoration: line-through; color: var(--text3); }
+.todo-table-status { width: 32px; text-align: center; }
+.todo-table-name { font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-table-tag {}
+.todo-tag-chip {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  white-space: nowrap;
+}
+.todo-table-owner {
+  color: var(--text2);
+  white-space: nowrap;
+  font-size: 12px;
+}
+.todo-table-owner span {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.todo-table-date {
+  color: var(--text3);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.todo-status-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.todo-status-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.todo-table-section-row td {
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+}
+.todo-table-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  background: var(--surface2);
+}
+.todo-table-section-header:hover { background: var(--border); }
+.todo-table-section-label { flex: 1; }
 
 /* ── Done Section ────────────────────────────── */
 .todo-done-section {

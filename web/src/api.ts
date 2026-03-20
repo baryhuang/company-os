@@ -33,7 +33,7 @@ async function dbSelectNodes(userId: string, dimension: string): Promise<TreeNod
   if (error || !data || data.length === 0) {
     throw new Error(`DB fetch failed [${dimension}]: ${error?.message ?? 'no data'}`);
   }
-  return assembleTree(data as Parameters<typeof assembleTree>[0]);
+  return assembleTree(data as Parameters<typeof assembleTree>[0], dimension);
 }
 
 async function dbUpsert(userId: string, docKey: string, data: unknown): Promise<void> {
@@ -56,6 +56,24 @@ async function dbSelectOptional<T>(userId: string, docKey: string): Promise<T | 
 
   if (error || !data) return null;
   return (data as { data: T }).data;
+}
+
+// ── Node status update ────────────────────────────────────────────
+
+export async function updateNodeStatus(
+  userId: string,
+  dimension: string,
+  path: string,
+  status: string,
+): Promise<void> {
+  const { error } = await insforge.database
+    .from(NODE_TABLE)
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('dimension', dimension)
+    .eq('path', path);
+
+  if (error) throw new Error(`Status update failed: ${error.message}`);
 }
 
 // ── Chat thread persistence ───────────────────────────────────────

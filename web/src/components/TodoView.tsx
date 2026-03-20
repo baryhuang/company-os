@@ -1,15 +1,25 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { ChevronRight, Circle, CheckCircle2, Clock, Mail, CalendarCheck, Settings2, XCircle, User, CalendarDays, FileText } from 'lucide-react';
 import { collectDates, parseDateOrdinal, TimelineBar } from './MarkmapView';
 import { findDateIndex } from '../hooks/useTimelineCutoff';
+import { updateNodeStatus } from '../api';
 import type { TimelineRange } from '../hooks/useTimelineCutoff';
 import type { TreeNode } from '../types';
 
 interface TodoViewProps {
   treeData: TreeNode;
+  userId: string;
   timelineRange: TimelineRange;
   onTimelineRangeChange: (range: Partial<TimelineRange>) => void;
 }
+
+const STATUS_CYCLE = ['partial', 'pending', 'final', 'excluded'] as const;
+const STATUS_LABEL: Record<string, string> = {
+  partial: 'Todo',
+  pending: 'Pending',
+  final: 'Done',
+  excluded: 'Excluded',
+};
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Email Follow-ups & Replies': <Mail size={16} />,
@@ -48,7 +58,7 @@ const STATUS_LABELS: Record<string, string> = {
 function StatusIcon({ status }: { status?: string }) {
   if (status === 'done' || status === 'final') return <CheckCircle2 size={16} className="todo-icon done" />;
   if (status === 'excluded') return <XCircle size={16} className="todo-icon excluded" />;
-  if (status === 'partial') return <Circle size={16} className="todo-icon pending" />;
+  if (status === 'pending') return <Clock size={16} className="todo-icon pending-status" />;
   return <Circle size={16} className="todo-icon default" />;
 }
 
@@ -114,60 +124,83 @@ function isDone(node: TreeNode): boolean {
   return DONE_STATUSES.has(node.status || '');
 }
 
-function TodoCategory({ node, items }: { node: TreeNode; items: TreeNode[] }) {
-  const [expanded, setExpanded] = useState(true);
-  const count = items.length;
-  const icon = CATEGORY_ICONS[node.name] || <Circle size={16} />;
+interface FlatItem {
+  node: TreeNode;
+  category: string;
+}
 
-  if (count === 0) return null;
-
+function SectionHeader({ icon, label, count, expanded, onToggle }: {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className="todo-category">
-      <button className="todo-category-header" onClick={() => setExpanded(!expanded)}>
-        <ChevronRight size={14} className={`todo-chevron${expanded ? ' expanded' : ''}`} />
-        <span className="todo-category-icon">{icon}</span>
-        <span className="todo-category-name">{node.name}</span>
-        <span className="todo-category-count">{count}</span>
-      </button>
-      {expanded && (
-        <div className="todo-category-items">
-          {items.map((child, i) => (
-            <TodoItem key={i} node={child} />
-          ))}
+    <tr className="todo-table-section-row" onClick={onToggle} style={{ cursor: 'pointer' }}>
+      <td colSpan={5}>
+        <div className="todo-table-section-header">
+          <ChevronRight size={14} className={`todo-chevron${expanded ? ' expanded' : ''}`} />
+          {icon}
+          <span className="todo-table-section-label">{label}</span>
+          <span className="todo-category-count">{count}</span>
         </div>
-      )}
-    </div>
+      </td>
+    </tr>
   );
 }
 
-function DoneSection({ items }: { items: { category: string; node: TreeNode }[] }) {
-  const [expanded, setExpanded] = useState(false);
-
-  if (items.length === 0) return null;
+function ItemRow({ item, onStatusChange }: { item: FlatItem; onStatusChange: (node: TreeNode, newStatus: string) => void }) {
+  const { node, category } = item;
+  const owner = node.owner as string | undefined;
+  const currentStatus = node.status || 'partial';
 
   return (
-    <div className="todo-category todo-done-section">
-      <button className="todo-category-header" onClick={() => setExpanded(!expanded)}>
-        <ChevronRight size={14} className={`todo-chevron${expanded ? ' expanded' : ''}`} />
-        <span className="todo-category-icon"><CheckCircle2 size={16} /></span>
-        <span className="todo-category-name">Done</span>
-        <span className="todo-category-count">{items.length}</span>
-      </button>
-      {expanded && (
-        <div className="todo-category-items">
-          {items.map((item, i) => (
-            <div key={i} className="todo-done-item-wrap">
-              <TodoItem node={item.node} />
-              <span className="todo-done-category-label">{item.category}</span>
-            </div>
-          ))}
+    <tr className={`todo-table-row${isDone(node) ? ' done' : ''}`}>
+      <td className="todo-table-status">
+        <div className="todo-status-wrapper">
+          <StatusIcon status={currentStatus} />
+          <select
+            className="todo-status-overlay"
+            value={currentStatus}
+            onChange={(e) => onStatusChange(node, e.target.value)}
+          >
+            {STATUS_CYCLE.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
         </div>
-      )}
-    </div>
+      </td>
+      <td className="todo-table-name">{node.name}</td>
+      <td className="todo-table-tag"><span className="todo-tag-chip">{category}</span></td>
+      <td className="todo-table-owner">{owner && <span><User size={12} /> {owner}</span>}</td>
+      <td className="todo-table-date">{node.date || ''}</td>
+    </tr>
   );
 }
 
-export function TodoView({ treeData, timelineRange, onTimelineRangeChange }: TodoViewProps) {
+export function TodoView({ treeData, userId, timelineRange, onTimelineRangeChange }: TodoViewProps) {
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+
+  const handleStatusChange = useCallback(async (node: TreeNode, newStatus: string) => {
+    const path = node._path;
+    const dimension = node._dimension;
+    if (!path || !dimension) return;
+
+    // Optimistic update
+    setStatusOverrides(prev => ({ ...prev, [path]: newStatus }));
+    try {
+      await updateNodeStatus(userId, dimension, path, newStatus);
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      // Revert on error
+      setStatusOverrides(prev => {
+        const next = { ...prev };
+        delete next[path];
+        return next;
+      });
+    }
+  }, [userId]);
   const allDates = useMemo(() => collectDates(treeData), [treeData]);
 
   const initialStart = timelineRange.startOrd != null && allDates.length > 0
@@ -199,38 +232,99 @@ export function TodoView({ treeData, timelineRange, onTimelineRangeChange }: Tod
 
   const categories = filteredTree.children ?? [];
 
-  // Separate active vs done items per category
-  const { activeCategories, doneItems } = useMemo(() => {
-    const active: { node: TreeNode; items: TreeNode[] }[] = [];
-    const done: { category: string; node: TreeNode }[] = [];
-
+  // Flatten all items with their category, apply overrides, sort by date descending, split into todo/pending/done
+  const { activeItems, pendingItems, doneItems } = useMemo(() => {
+    const all: FlatItem[] = [];
     for (const cat of categories) {
-      const children = cat.children ?? [];
-      const activeItems = children.filter(c => !isDone(c));
-      const doneChildren = children.filter(c => isDone(c));
+      for (const child of cat.children ?? []) {
+        // Apply optimistic status override if present
+        const overridden = child._path && statusOverrides[child._path]
+          ? { ...child, status: statusOverrides[child._path] }
+          : child;
+        all.push({ node: overridden, category: cat.name });
+      }
+    }
+    // Sort by date descending (most recent first)
+    all.sort((a, b) => {
+      const aOrd = parseDateOrdinal(a.node.date || '') ?? 0;
+      const bOrd = parseDateOrdinal(b.node.date || '') ?? 0;
+      return bOrd - aOrd;
+    });
 
-      active.push({ node: cat, items: activeItems });
-      for (const child of doneChildren) {
-        done.push({ category: cat.name, node: child });
+    const active: FlatItem[] = [];
+    const pending: FlatItem[] = [];
+    const done: FlatItem[] = [];
+
+    for (const item of all) {
+      const status = item.node.status || 'partial';
+      if (isDone(item.node)) {
+        done.push(item);
+      } else if (status === 'pending') {
+        pending.push(item);
+      } else {
+        active.push(item);
       }
     }
 
-    return { activeCategories: active, doneItems: done };
-  }, [categories]);
+    return { activeItems: active, pendingItems: pending, doneItems: done };
+  }, [categories, statusOverrides]);
 
-  const activeCount = activeCategories.reduce((sum, cat) => sum + cat.items.length, 0);
+  const [todoExpanded, setTodoExpanded] = useState(true);
+  const [pendingExpanded, setPendingExpanded] = useState(true);
+  const [doneExpanded, setDoneExpanded] = useState(false);
 
   return (
     <div className="todo-view">
       <div className="todo-header">
         <h2 className="todo-title">{treeData.name}</h2>
-        <span className="todo-summary">{activeCount} active, {doneItems.length} done across {categories.length} categories</span>
+        <span className="todo-summary">
+          {activeItems.length} todo, {pendingItems.length} pending, {doneItems.length} done
+        </span>
       </div>
       <div className="todo-list">
-        {activeCategories.map((cat, i) => (
-          <TodoCategory key={i} node={cat.node} items={cat.items} />
-        ))}
-        <DoneSection items={doneItems} />
+        <table className="todo-table">
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}></th>
+              <th>Title</th>
+              <th style={{ width: 180 }}>Tag</th>
+              <th style={{ width: 100 }}>Owner</th>
+              <th style={{ width: 70 }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <SectionHeader
+              icon={<Circle size={16} />}
+              label="Todo"
+              count={activeItems.length}
+              expanded={todoExpanded}
+              onToggle={() => setTodoExpanded(!todoExpanded)}
+            />
+            {todoExpanded && activeItems.map((item, i) => (
+              <ItemRow key={`a-${i}`} item={item} onStatusChange={handleStatusChange} />
+            ))}
+            <SectionHeader
+              icon={<Clock size={16} />}
+              label="Pending"
+              count={pendingItems.length}
+              expanded={pendingExpanded}
+              onToggle={() => setPendingExpanded(!pendingExpanded)}
+            />
+            {pendingExpanded && pendingItems.map((item, i) => (
+              <ItemRow key={`p-${i}`} item={item} onStatusChange={handleStatusChange} />
+            ))}
+            <SectionHeader
+              icon={<CheckCircle2 size={16} />}
+              label="Done"
+              count={doneItems.length}
+              expanded={doneExpanded}
+              onToggle={() => setDoneExpanded(!doneExpanded)}
+            />
+            {doneExpanded && doneItems.map((item, i) => (
+              <ItemRow key={`d-${i}`} item={item} onStatusChange={handleStatusChange} />
+            ))}
+          </tbody>
+        </table>
       </div>
       <TimelineBar
         allDates={allDates}

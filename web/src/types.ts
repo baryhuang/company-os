@@ -26,6 +26,8 @@ export interface TreeNode {
   executor?: string;
   deadline?: string;
   timeline?: string;
+  _path?: string;
+  _dimension?: string;
 }
 
 export interface Competitor {

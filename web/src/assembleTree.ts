@@ -14,12 +14,13 @@ interface AtlasNodeRow {
   extra: Record<string, unknown> | null;
 }
 
-export function assembleTree(rows: AtlasNodeRow[]): TreeNode {
+export function assembleTree(rows: AtlasNodeRow[], dimension?: string): TreeNode {
   const sorted = [...rows].sort((a, b) => a.depth - b.depth || a.sort_order - b.sort_order);
   const nodeMap = new Map<string, TreeNode>();
 
   for (const row of sorted) {
-    const node: TreeNode = { name: row.name };
+    const node: TreeNode = { name: row.name, _path: row.path };
+    if (dimension) node._dimension = dimension;
     if (row.status) node.status = row.status;
     if (row.date) node.date = row.date;
     if (row.description) node.desc = row.description;

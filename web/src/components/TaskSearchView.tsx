@@ -174,38 +174,57 @@ export function TaskSearchView() {
           {!loading && searched && results.length === 0 && (
             <div className="task-empty">No matching tasks found.</div>
           )}
-          {!loading && sortedResults.map((task) => (
-            <div key={task.ID} className="task-card">
-              <div className="task-card-top">
-                <span className="task-id">{task.ID}</span>
-                {task.Status && (
-                  <span className="task-status-badge" style={{ color: STATUS_COLORS[task.Status] || 'var(--text3)' }}>
-                    {task.Status}
-                  </span>
-                )}
-                {task.Priority && task.Priority !== 'No priority' && (
-                  <span className="task-priority-badge" style={{ color: PRIORITY_COLORS[task.Priority] || 'var(--text3)' }}>
-                    {task.Priority}
-                  </span>
-                )}
-                {task.similarity !== undefined && (
-                  <span className="task-similarity">{(task.similarity * 100).toFixed(0)}%</span>
-                )}
-              </div>
-              <div className="task-card-title">{task.Title}</div>
-              {task.Project && <div className="task-card-project">{task.Project}</div>}
-              {task.Description && (
-                <div className="task-card-desc">{task.Description.slice(0, 200)}{task.Description.length > 200 ? '...' : ''}</div>
-              )}
-              <div className="task-card-meta">
-                {task.Assignee && <span>Assignee: {task.Assignee}</span>}
-                {task['Due Date'] && <span>Due: {task['Due Date']}</span>}
-                {task['Blocked by'] && <span className="task-blocked">Blocked by: {task['Blocked by']}</span>}
-                {task['Duplicate of'] && <span className="task-dup">Dup of: {task['Duplicate of']}</span>}
-                {task['Related to'] && <span>Related: {task['Related to']}</span>}
-              </div>
-            </div>
-          ))}
+          {!loading && sortedResults.length > 0 && (
+            <table className="task-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Status</th>
+                  <th>Priority</th>
+                  <th>Tags</th>
+                  <th>Project</th>
+                  <th>Assignee</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedResults.map((task) => (
+                  <tr key={task.ID}>
+                    <td className="task-table-id">{task.ID}</td>
+                    <td className="task-table-title">
+                      {task.Title}
+                      {task.Description && (
+                        <span className="task-table-desc">{task.Description.slice(0, 120)}{task.Description.length > 120 ? '...' : ''}</span>
+                      )}
+                    </td>
+                    <td>
+                      {task.Status && (
+                        <span className="task-status-badge" style={{ color: STATUS_COLORS[task.Status] || 'var(--text3)' }}>
+                          {task.Status}
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {task.Priority && task.Priority !== 'No priority' && (
+                        <span className="task-priority-badge" style={{ color: PRIORITY_COLORS[task.Priority] || 'var(--text3)' }}>
+                          {task.Priority}
+                        </span>
+                      )}
+                    </td>
+                    <td className="task-table-tags">
+                      {task.Labels && task.Labels.split(',').map((label) => (
+                        <span key={label.trim()} className="task-tag">{label.trim()}</span>
+                      ))}
+                    </td>
+                    <td className="task-table-project">{task.Project}</td>
+                    <td className="task-table-assignee">{task.Assignee}</td>
+                    <td className="task-table-date">{task.Updated ? new Date(task.Updated).toLocaleDateString() : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

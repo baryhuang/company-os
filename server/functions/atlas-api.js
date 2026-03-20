@@ -3,7 +3,7 @@ import { createClient } from 'npm:@insforge/sdk';
 export default async function(req) {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, PUT, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
@@ -239,6 +239,74 @@ export default async function(req) {
           status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+    }
+
+    // GET task statuses — lightweight list of all task nodes with status
+    if (req.method === 'GET' && action === 'task-statuses') {
+      const userId = url.searchParams.get('user_id') || '__default__';
+      const { data, error } = await client.database
+        .from('atlas_nodes')
+        .select('path, name, status, date, updated_at, extra')
+        .eq('user_id', userId)
+        .eq('dimension', 'tasks')
+        .gt('depth', 1)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        return new Response(JSON.stringify({ error: `Failed to fetch task statuses: ${error.message}` }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const tasks = (data || []).map(row => ({
+        path: row.path,
+        name: row.name,
+        status: row.status,
+        date: row.date,
+        owner: row.extra?.owner || null,
+        updated_at: row.updated_at,
+      }));
+
+      return new Response(JSON.stringify({ user_id: userId, count: tasks.length, tasks }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // PATCH task status — update a single task's status
+    if (req.method === 'PATCH' && action === 'task-status') {
+      const userId = url.searchParams.get('user_id') || '__default__';
+      const body = await req.json();
+      const { path: taskPath, status: newStatus } = body;
+
+      if (!taskPath || !newStatus) {
+        return new Response(JSON.stringify({ error: 'path and status are required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const validStatuses = new Set(['partial', 'pending', 'final', 'excluded']);
+      if (!validStatuses.has(newStatus)) {
+        return new Response(JSON.stringify({ error: `Invalid status. Must be one of: ${[...validStatuses].join(', ')}` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { error } = await client.database
+        .from('atlas_nodes')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('dimension', 'tasks')
+        .eq('path', taskPath);
+
+      if (error) {
+        return new Response(JSON.stringify({ error: `Failed to update status: ${error.message}` }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ status: 'updated', path: taskPath, new_status: newStatus }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     return new Response(JSON.stringify({ error: 'Not found. Use ?action=dimensions or ?action=data&name=<name>' }), {
