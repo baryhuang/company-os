@@ -31,7 +31,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
   };
 
   // IDs pinned to the top (Techstars required)
-  const PINNED_IDS = new Set(['okr_kpi', 'competitor', 'strategic-partners']);
+  const PINNED_IDS = new Set(['okr_kpi', 'competitor', 'strategic-partners', 'people-network']);
 
   const { pinned, grouped } = useMemo(() => {
     const pinnedItems: { dim: DimensionMeta; index: number }[] = [];
@@ -49,7 +49,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
     });
 
     // Sort pinned in desired order: okr_kpi, competitor, strategic-partners
-    const pinnedOrder = ['okr_kpi', 'competitor', 'strategic-partners'];
+    const pinnedOrder = ['okr_kpi', 'competitor', 'strategic-partners', 'people-network'];
     pinnedItems.sort((a, b) => pinnedOrder.indexOf(a.dim.id) - pinnedOrder.indexOf(b.dim.id));
 
     for (const g of GROUP_ORDER) {
@@ -97,9 +97,10 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
           <span className="icon">{'\uD83D\uDDFA\uFE0F'}</span>Vision to Execution
         </div>
 
-        {pinned.map(({ dim }) => {
-          const viewMap: Record<string, ViewType> = { okr_kpi: 'okr', competitor: 'competitor', 'strategic-partners': 'partners' };
+        {pinned.map(({ dim, index }) => {
+          const viewMap: Record<string, ViewType> = { okr_kpi: 'okr', competitor: 'competitor', 'strategic-partners': 'partners', 'people-network': 'people' };
           const view = viewMap[dim.id];
+          const label = dim.id === 'people-network' ? 'People' : dim.title;
           return (
             <div
               key={dim.id}
@@ -107,7 +108,7 @@ export function Sidebar({ dimensions, currentView, currentDimIndex, onSwitch, op
               onClick={() => handleClick(view)}
             >
               <span className="icon">{dim.icon}</span>
-              {dim.title}
+              {label}
             </div>
           );
         })}

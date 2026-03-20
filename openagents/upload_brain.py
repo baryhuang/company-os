@@ -129,13 +129,15 @@ def _load_detail_files(node, dim_dir):
                     node["desc"] = detail["desc"]
                 if "quotes" in detail:
                     node["quotes"] = detail["quotes"]
+                if "full_content" in detail:
+                    node["full_content"] = detail["full_content"]
 
     for child in node.get("children", []):
         _load_detail_files(child, dim_dir)
 
 
 def _parse_detail_md(filepath):
-    """Parse a detail .md file and extract desc and quotes."""
+    """Parse a detail .md file and extract desc, quotes, and full content."""
     result = {}
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -152,6 +154,21 @@ def _parse_detail_md(filepath):
         quotes = [q.strip().lstrip('- ').strip('"') for q in quotes_text.split('\n') if q.strip().startswith('-')]
         if quotes:
             result["quotes"] = quotes
+
+    # Capture full markdown content (everything after frontmatter header + metadata)
+    # Strip the "# Title" line and "- **key**: val" metadata lines at the top
+    lines = content.split('\n')
+    body_start = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # Skip title, blank lines, and frontmatter metadata (- **key**: val)
+        if not stripped or stripped.startswith('# ') or re.match(r'^- \*\*\w+\*\*:', stripped):
+            body_start = i + 1
+        else:
+            break
+    body = '\n'.join(lines[body_start:]).strip()
+    if body:
+        result["full_content"] = body
 
     return result
 

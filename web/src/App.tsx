@@ -19,6 +19,7 @@ import { WorkspacePicker } from './components/WorkspacePicker';
 import { SettingsView } from './components/SettingsView';
 import { LandingPage } from './components/LandingPage';
 import { ConversationsView } from './components/ConversationsView';
+import { PeopleView } from './components/PeopleView';
 import { ChatWidget } from './components/ChatWidget';
 import type { ViewType } from './types';
 
@@ -34,7 +35,6 @@ function AuthenticatedApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [buildTab, setBuildTab] = useState<'tree' | 'gantt'>('gantt');
-  const [peopleTab, setPeopleTab] = useState<'tree' | 'meetings'>('tree');
   const [timelineRange, setTimelineRange] = useTimelineRange();
   const [savedRange, setSavedRange] = useState<{ startOrd: number | null; endOrd: number | null } | null>(null);
 
@@ -138,16 +138,8 @@ function AuthenticatedApp() {
                   <button className={`tab-btn${buildTab === 'gantt' ? ' active' : ''}`} onClick={() => setBuildTab('gantt')}>Timeline</button>
                 </div>
               )}
-              {dimensions[currentDimIndex].id === 'people-network' && (
-                <div className="view-tabs">
-                  <button className={`tab-btn${peopleTab === 'tree' ? ' active' : ''}`} onClick={() => setPeopleTab('tree')}>Relationship Map</button>
-                  <button className={`tab-btn${peopleTab === 'meetings' ? ' active' : ''}`} onClick={() => setPeopleTab('meetings')}>Meetings</button>
-                </div>
-              )}
               {buildTab === 'gantt' && dimensions[currentDimIndex].id === 'build'
                 ? <SwimGanttView treeData={progressData || dimensionsData[dimensions[currentDimIndex].id]} timelineRange={timelineRange} onTimelineRangeChange={setTimelineRange} />
-                : peopleTab === 'meetings' && dimensions[currentDimIndex].id === 'people-network' && appointmentsData
-                ? <AppointmentsView data={appointmentsData} />
                 : <MarkmapDimensionView
                     treeData={dimensionsData[dimensions[currentDimIndex].id]}
                     expandLevel={expandLevel}
@@ -165,6 +157,10 @@ function AuthenticatedApp() {
 
           {currentView === 'partners' && dimensionsData['strategic-partners'] && (
             <PartnersView treeData={dimensionsData['strategic-partners']} />
+          )}
+
+          {currentView === 'people' && dimensionsData['people-network'] && (
+            <PeopleView treeData={dimensionsData['people-network']} />
           )}
 
           {currentView === 'okr' && dimensionsData['okr_kpi'] && (
