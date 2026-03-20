@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#eef0f5"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4a6cf7"/>
+      <stop offset="100%" stop-color="#6e5ce7"/>
+    </linearGradient>
+    <filter id="glow">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#4a6cf7" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+
+  <!-- Constellation lines -->
+  <g stroke="#4a6cf7" stroke-width="2" opacity="0.15">
+    <line x1="512" y1="340" x2="240" y2="200"/>
+    <line x1="512" y1="340" x2="784" y2="210"/>
+    <line x1="512" y1="340" x2="180" y2="440"/>
+    <line x1="512" y1="340" x2="844" y2="420"/>
+    <line x1="240" y1="200" x2="180" y2="440"/>
+    <line x1="784" y1="210" x2="844" y2="420"/>
+  </g>
+
+  <!-- Constellation nodes -->
+  <circle cx="240" cy="200" r="48" fill="url(#accent)" opacity="0.55"/>
+  <circle cx="784" cy="210" r="39" fill="url(#accent)" opacity="0.45"/>
+  <circle cx="180" cy="440" r="33" fill="url(#accent)" opacity="0.4"/>
+  <circle cx="844" cy="420" r="42" fill="url(#accent)" opacity="0.5"/>
+
+  <!-- Central braces -->
+  <g filter="url(#glow)">
+    <text x="512" y="540" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="340" font-weight="200" fill="url(#accent)" opacity="0.9">{}</text>
+  </g>
+
+  <!-- Company OS -->
+  <text x="512" y="760" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="100" font-weight="600" letter-spacing="2" fill="#1a1a2e">Company</text>
+  <text x="512" y="860" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif" font-size="80" font-weight="300" letter-spacing="14" fill="url(#accent)">OS</text>
+</svg>
