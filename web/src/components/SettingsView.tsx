@@ -2,12 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchWorkspaceMembers, addWorkspaceMember, removeWorkspaceMember, updateWorkspaceName } from '../api';
 import type { Workspace, WorkspaceMember } from '../types';
 import { getElectronSettings } from '../insforge';
+import { checkChannelHealth } from '../channelApi';
 
 interface SettingsViewProps {
   workspace: Workspace;
   workspaces: Workspace[];
   onSelectWorkspace: (ownerId: string) => void;
 }
+
+type ChatBackend = 'openagents' | 'channel';
+
+const CHAT_BACKEND_STORAGE_KEY = 'company-os:chatBackend';
 
 export function SettingsView({ workspace, workspaces, onSelectWorkspace }: SettingsViewProps) {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
@@ -25,6 +30,11 @@ export function SettingsView({ workspace, workspaces, onSelectWorkspace }: Setti
   const [agentName, setAgentName] = useState('');
   const [backendSaving, setBackendSaving] = useState(false);
   const [backendSaved, setBackendSaved] = useState(false);
+  const [chatBackend, setChatBackend] = useState<ChatBackend>(() => {
+    const storedChatBackend = window.localStorage.getItem(CHAT_BACKEND_STORAGE_KEY);
+    return storedChatBackend === 'channel' ? 'channel' : 'openagents';
+  });
+  const [channelHealthy, setChannelHealthy] = useState(false);
 
   useEffect(() => {
     if (isElectron) {
@@ -37,6 +47,47 @@ export function SettingsView({ workspace, workspaces, onSelectWorkspace }: Setti
       }
     }
   }, [isElectron]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    window.localStorage.setItem(CHAT_BACKEND_STORAGE_KEY, chatBackend);
+
+    if (window.electronAPI) {
+      const electronSettings = getElectronSettings();
+      const nextSettings: Record<string, string> = {
+        chatBackend,
+      };
+
+      if (electronSettings?.backendUrl) {
+        nextSettings.backendUrl = electronSettings.backendUrl;
+      }
+      if (electronSettings?.anonKey) {
+        nextSettings.anonKey = electronSettings.anonKey;
+      }
+      if (electronSettings?.workspaceUrl) {
+        nextSettings.workspaceUrl = electronSettings.workspaceUrl;
+      }
+      if (electronSettings?.agentName) {
+        nextSettings.agentName = electronSettings.agentName;
+      }
+
+      void window.electronAPI.settings.saveSettings(nextSettings).catch(() => {});
+    }
+
+    const refreshChannelHealth = async () => {
+      const healthy = await checkChannelHealth();
+      if (!cancelled) {
+        setChannelHealthy(healthy);
+      }
+    };
+
+    void refreshChannelHealth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chatBackend]);
 
   const handleSaveBackend = async () => {
     if (!window.electronAPI) return;
@@ -177,6 +228,45 @@ export function SettingsView({ workspace, workspaces, onSelectWorkspace }: Setti
             </div>
           </div>
         )}
+
+        <div className="settings-section">
+          <div className="settings-section-title">Chat Backend</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  backgroundColor: channelHealthy ? '#16a34a' : '#dc2626',
+                  display: 'inline-block',
+                }}
+              />
+              <span className="settings-value">
+                {channelHealthy ? 'Channel server connected' : 'Channel server unavailable'}
+              </span>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <input
+                type="radio"
+                name="chat-backend"
+                checked={chatBackend === 'openagents'}
+                onChange={() => setChatBackend('openagents')}
+              />
+              <span>OpenAgents</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              <input
+                type="radio"
+                name="chat-backend"
+                checked={chatBackend === 'channel'}
+                onChange={() => setChatBackend('channel')}
+              />
+              <span>Claude Code Channel</span>
+            </label>
+          </div>
+        </div>
 
         {/* Workspace name */}
         <div className="settings-section">
