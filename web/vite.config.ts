@@ -43,6 +43,7 @@ export default defineConfig({
       '/channel': {
         target: 'http://127.0.0.1:8787',
         changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/channel/, ''),
         configure: (proxy, _options) => {
           proxy.on('error', (err: Error, _req: IncomingMessage, res: ServerResponse) => {
             console.warn('[channel proxy] target unavailable:', err.message)
