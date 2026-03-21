@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { MessageCircle, X, Maximize2, Minimize2, Send, Brain, Wrench, Activity, Pencil, Eye, Terminal, Search, ChevronRight, RefreshCw, Plus } from 'lucide-react';
 import { loadChatThread, saveChatThread, deleteChatThread } from '../api';
 import type { ChatThreadData } from '../api';
+import { sendChannelMessage, pollChannelMessages, checkChannelHealth } from '../channelApi';
+import type { ChannelMessage } from '../channelApi';
 import './ChatWidget.css';
 
 const WORKSPACE_URL = import.meta.env.VITE_OPENAGENTS_WORKSPACE_URL || '';
@@ -277,6 +279,11 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savePendingRef = useRef(false);
   const masterAgentRef = useRef<string | undefined>(undefined);
+  const [chatBackend, setChatBackend] = useState<'openagents' | 'channel'>(
+    () => (localStorage.getItem('company-os:chatBackend') as 'openagents' | 'channel') || 'openagents'
+  );
+  const channelCursorRef = useRef<string>('0');
+  const [channelHealthy, setChannelHealthy] = useState(true);
 
   const config = parseWorkspaceUrl(WORKSPACE_URL);
 
@@ -291,6 +298,36 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'company-os:chatBackend' && e.newValue) {
+        setChatBackend(e.newValue as 'openagents' | 'channel');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  useEffect(() => {
+    const syncChatBackend = () => {
+      const storedChatBackend = localStorage.getItem('company-os:chatBackend');
+      if (storedChatBackend === 'openagents' || storedChatBackend === 'channel') {
+        setChatBackend((prev) => prev === storedChatBackend ? prev : storedChatBackend);
+      }
+    };
+
+    syncChatBackend();
+    const syncTimer = setInterval(syncChatBackend, 1000);
+    return () => clearInterval(syncTimer);
+  }, []);
+
+  useEffect(() => {
+    setMessages([]);
+    channelCursorRef.current = '0';
+    setChannelHealthy(true);
+    setWaitingForAgent(false);
+  }, [chatBackend]);
 
   // Persist thread to DB (debounced — only saves when savePendingRef is set)
   const persistThread = useCallback(async () => {
@@ -430,6 +467,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
 
   // Load saved thread or create new one
   const initChannel = useCallback(async () => {
+    if (chatBackend === 'channel') return;
     if (!config || channelName) return;
     setInitializing(true);
     try {
@@ -449,7 +487,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     }
     setInitializing(false);
     await createNewChannel();
-  }, [config, channelName, userId, createNewChannel, loadHistory]);
+  }, [chatBackend, config, channelName, userId, createNewChannel, loadHistory]);
 
   // Handle "New Chat" — clear everything and create fresh channel
   const handleNewChat = useCallback(async () => {
@@ -459,16 +497,22 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     setWaitingForAgent(false);
     lastSeenIdRef.current = null;
     masterAgentRef.current = undefined;
+    if (chatBackend === 'channel') {
+      channelCursorRef.current = '0';
+      setChannelHealthy(true);
+      return;
+    }
     // Clear persisted thread
     try {
       await deleteChatThread(userId);
     } catch { /* ignore */ }
     // Create new channel
     await createNewChannel();
-  }, [userId, createNewChannel]);
+  }, [chatBackend, userId, createNewChannel]);
 
   // Poll for new messages (incremental, uses `after` cursor)
   const poll = useCallback(async () => {
+    if (chatBackend === 'channel') return;
     if (!config || !channelName) return;
     try {
       const params = new URLSearchParams({
@@ -506,10 +550,11 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     } catch (err) {
       console.error('Poll error:', err);
     }
-  }, [config, channelName, eventsToMessages]);
+  }, [chatBackend, config, channelName, eventsToMessages]);
 
   // Fixed 5s polling loop
   useEffect(() => {
+    if (chatBackend === 'channel') return;
     if (!isOpen || !channelName) return;
     poll();
     pollTimerRef.current = setInterval(async () => {
@@ -521,7 +566,58 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
       }
     }, 5000);
     return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
-  }, [isOpen, channelName, poll, persistThread]);
+  }, [isOpen, chatBackend, channelName, poll, persistThread]);
+
+  useEffect(() => {
+    if (!isOpen || chatBackend !== 'channel') return;
+
+    let cancelled = false;
+    const channelPollTimer = { current: null as ReturnType<typeof setInterval> | null };
+
+    const runHealthCheck = async () => {
+      const healthy = await checkChannelHealth();
+      if (!cancelled) setChannelHealthy(healthy);
+    };
+
+    const runPoll = async () => {
+      try {
+        const data = await pollChannelMessages(channelCursorRef.current);
+        if (cancelled) return;
+        setChannelHealthy(true);
+        if (data.messages.length > 0) {
+          channelCursorRef.current = data.cursor;
+          const newMsgs: ChatMessage[] = data.messages.map((m: ChannelMessage) => ({
+            id: m.id,
+            senderType: 'agent' as const,
+            senderName: 'Channel',
+            content: m.text,
+            messageType: 'chat' as const,
+            timestamp: new Date(m.timestamp).getTime(),
+          }));
+          setMessages((prev) => {
+            const existingIds = new Set(prev.map((msg) => msg.id));
+            const unique = newMsgs.filter((msg) => !existingIds.has(msg.id));
+            return unique.length > 0 ? [...prev, ...unique] : prev;
+          });
+          setWaitingForAgent(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Channel poll error:', err);
+          setChannelHealthy(false);
+        }
+      }
+    };
+
+    runHealthCheck();
+    runPoll();
+    channelPollTimer.current = setInterval(runPoll, 5000);
+
+    return () => {
+      cancelled = true;
+      if (channelPollTimer.current) clearInterval(channelPollTimer.current);
+    };
+  }, [isOpen, chatBackend]);
 
   // Init channel when panel opens (covers both FAB click and external toggle)
   useEffect(() => {
@@ -533,7 +629,8 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !config || !channelName || sending) return;
+    if (!input.trim() || sending) return;
+    if (chatBackend !== 'channel' && (!config || !channelName)) return;
     const text = input.trim();
     setInput('');
     setSending(true);
@@ -549,8 +646,21 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
     };
     setMessages((prev) => [...prev, optimistic]);
 
+    if (chatBackend === 'channel') {
+      try {
+        await sendChannelMessage(text, userId);
+      } catch (err) {
+        console.error('Channel send failed:', err);
+        setChannelHealthy(false);
+        setWaitingForAgent(false);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     try {
-      await apiRequest('/v1/events', config, {
+      await apiRequest('/v1/events', config!, {
         method: 'POST',
         body: JSON.stringify({
           type: 'workspace.message.posted',
@@ -558,7 +668,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
           target: `channel/${channelName}`,
           payload: { content: text, sender_type: 'human' },
           visibility: 'channel',
-          network: config.workspaceId,
+          network: config!.workspaceId,
         }),
       });
       setTimeout(() => poll(), 500);
@@ -597,7 +707,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
 
   const groups = useMemo(() => groupMessages(filteredMessages), [filteredMessages]);
 
-  if (!config) return null;
+  if (!config && chatBackend !== 'channel') return null;
 
   return (
     <>
@@ -611,6 +721,7 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
         <div className={`chat-panel${isFullscreen ? ' fullscreen' : ''}`}>
           <div className="chat-panel-header">
             <span className="chat-panel-title">Agent Chat</span>
+            <span className="chat-backend-indicator">{chatBackend === 'channel' ? 'Channel' : 'OpenAgents'}</span>
             <div className="chat-panel-actions">
               <button className="chat-header-btn" onClick={handleNewChat} title="New Chat">
                 <Plus size={14} />
@@ -627,7 +738,10 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
           </div>
 
           <div className="chat-panel-body">
-            {initializing && <div className="chat-status">Connecting to agent...</div>}
+            {initializing && <div className="chat-status">{chatBackend === 'channel' ? 'Connected to Channel backend' : 'Connecting to agent...'}</div>}
+            {chatBackend === 'channel' && !channelHealthy && (
+              <div className="chat-status">Channel unavailable — start the channel server or switch to OpenAgents in Settings.</div>
+            )}
             {messages.length === 0 && !initializing && (
               <div className="chat-status">Send a message to start chatting with the agent.</div>
             )}
@@ -681,10 +795,10 @@ export function ChatWidget({ isOpen: controlledOpen, onToggle, userId }: ChatWid
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
               rows={1}
-              disabled={!channelName || sending}
+              disabled={chatBackend === 'channel' ? (sending || !channelHealthy) : (!channelName || sending)}
             />
             <button className="chat-send-btn" onClick={handleSend}
-              disabled={!input.trim() || !channelName || sending} title="Send">
+              disabled={chatBackend === 'channel' ? (!input.trim() || sending || !channelHealthy) : (!input.trim() || !channelName || sending)} title="Send">
               <Send size={16} />
             </button>
           </div>

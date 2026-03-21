@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'http'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
@@ -38,6 +39,20 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/workspace-api/, ''),
         secure: true,
+      },
+      '/channel': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/channel/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('error', (err: Error, _req: IncomingMessage, res: ServerResponse) => {
+            console.warn('[channel proxy] target unavailable:', err.message)
+            if (!res.headersSent) {
+              res.writeHead(503, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify({ error: 'Channel server unavailable' }))
+            }
+          })
+        },
       },
     },
   },
