@@ -165,6 +165,78 @@ Get started with just two free API keys: [Telegram BotFather](https://t.me/BotFa
 
 ---
 
+## Claude Code Channel Integration
+
+Company OS includes a built-in channel server that lets Claude Code agents communicate directly with the web dashboard in real time — no API key required, just your claude.ai login.
+
+### Prerequisites
+
+- **Claude Code** v2.1.80 or later
+- **Bun** >= 1.2.3
+- **claude.ai** account (login-based auth, no API key needed)
+
+### Quick start
+
+```bash
+# 1. Install channel server dependencies
+cd channel-server && bun install
+
+# 2. Start the channel server (port 8787)
+bun channel-server/server.ts
+
+# 3. Start the frontend (port 5173, separate terminal)
+cd web && bun run dev
+
+# 4. Launch Claude Code with channel support
+claude --dangerously-load-development-channels server:company-os
+
+# 5. In the web dashboard: open Settings and switch Chat Backend to "Channel"
+```
+
+### How it works
+
+The channel server (`channel-server/server.ts`) is a single-file MCP server that bridges the web frontend and your Claude Code session:
+
+```
+Web Dashboard  ──HTTP──►  channel-server (port 8787)  ──stdio──►  Claude Code
+    ▲                            │
+    └──────── HTTP poll ─────────┘
+```
+
+- The frontend sends messages via `POST /channel/send` (proxied through Vite dev server)
+- Claude Code receives them as `<channel source="company-os" ...>` tags in its context
+- Claude replies using the `reply` tool, which pushes the response into an in-memory ring buffer
+- The frontend polls `GET /channel/messages` every 5 seconds to pick up replies
+
+Messages are ephemeral — the ring buffer lives only in memory and is tied to the channel server's process lifetime.
+
+### Switching backends
+
+The Settings panel includes a **Chat Backend** toggle:
+
+- **OpenAgents** (default) — uses the OpenAgents cloud agent for chat
+- **Channel** — uses the local Claude Code channel server
+
+The selection persists across page refreshes. You can switch back to OpenAgents at any time without restarting anything. If the channel server is unavailable, the dashboard shows an inline status indicator and disables the send button until the server is reachable again.
+
+### Environment variables (channel server)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8787` | HTTP listen port |
+| `BUFFER_SIZE` | `1000` | Ring buffer capacity (messages) |
+| `CORS_ORIGINS` | _(none)_ | Comma-separated extra allowed origins |
+
+### Limitations
+
+- **Research preview** — requires the `--dangerously-load-development-channels` flag
+- **Localhost only** — the channel server is not designed for production or remote deployment
+- **Ephemeral messages** — all messages are lost when the channel server restarts; there is no persistence
+- **Text only** — file attachments are not supported in channel mode
+- **Single session** — one Claude Code session per channel server instance
+
+---
+
 ## Critical TODOs
 
 1. **Company Brain must sync to a shared location.** The Company Brain directory (`company-os/`) currently lives locally. It needs to be synced to a shared, accessible location (S3 or Google Drive) so that all processing agents and team members operate on the same source of truth.
