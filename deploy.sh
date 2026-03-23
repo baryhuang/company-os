@@ -81,9 +81,10 @@ if crontab -l 2>/dev/null | grep -q "sync-all.sh"; then
     echo "  Cron job installed successfully:"
     crontab -l | grep "sync-all.sh"
 else
-    echo "  WARNING: Cron job was not installed. Add it manually:"
+    echo "  ERROR: Cron job was not installed. Add it manually:"
     echo "    crontab -e"
     echo "    ${CRON_ENTRY}"
+    exit 1
 fi
 
 echo ""
