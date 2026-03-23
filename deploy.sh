@@ -71,7 +71,23 @@ echo "[7/7] Installing sync service..."
 chmod +x "${REPO_DIR}"/scripts/sync-*.sh
 
 mkdir -p ~/.config/systemd/user
-cp "${REPO_DIR}/systemd/company-os-sync.service" ~/.config/systemd/user/
+cat > ~/.config/systemd/user/company-os-sync.service <<EOF
+[Unit]
+Description=Company OS S3 Sync Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=${REPO_DIR}/scripts/sync-all.sh
+Restart=always
+RestartSec=10
+Environment=SYNC_INTERVAL=300
+Environment=PATH=${HOME}/.local/bin:${HOME}/.bun/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
+EOF
 
 systemctl --user daemon-reload
 systemctl --user enable company-os-sync.service
