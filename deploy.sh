@@ -7,6 +7,8 @@
 
 set -euo pipefail
 
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== Company OS Agent — Ubuntu Deployment ==="
 echo ""
 
@@ -43,9 +45,11 @@ else
     echo "[4/7] Claude Code already installed: $(claude --version 2>/dev/null || echo 'installed')"
 fi
 
-# 5. Create local directory structure
+# 5. Create local directory structure + copy agent CLAUDE.md
 echo "[5/7] Creating local directory structure..."
 mkdir -p ~/company-os/peakmojo/{brain,by-dates,context/skills,users}
+cp "${REPO_DIR}/scripts/agent-CLAUDE.md" ~/company-os/peakmojo/CLAUDE.md
+echo "  Copied agent CLAUDE.md to ~/company-os/peakmojo/CLAUDE.md"
 
 # 6. Initial S3 pull
 echo "[6/7] Pulling data from S3..."
@@ -64,7 +68,6 @@ fi
 
 # 7. Install cron jobs
 echo "[7/7] Installing cron jobs (every 5 minutes)..."
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 SYNC_SCRIPT="${REPO_DIR}/scripts/sync-all.sh"
 chmod +x "${REPO_DIR}"/scripts/sync-*.sh
 
