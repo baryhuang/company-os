@@ -76,6 +76,16 @@ LOG_FILE="${HOME}/company-os/sync.log"
 CRON_ENTRY="*/5 * * * * ${SYNC_SCRIPT} >> ${LOG_FILE} 2>&1"
 (crontab -l 2>/dev/null | grep -v "sync-all.sh"; echo "${CRON_ENTRY}") | crontab -
 
+# Verify cron was installed
+if crontab -l 2>/dev/null | grep -q "sync-all.sh"; then
+    echo "  Cron job installed successfully:"
+    crontab -l | grep "sync-all.sh"
+else
+    echo "  WARNING: Cron job was not installed. Add it manually:"
+    echo "    crontab -e"
+    echo "    ${CRON_ENTRY}"
+fi
+
 echo ""
 echo "=== Deployment Complete ==="
 echo ""
