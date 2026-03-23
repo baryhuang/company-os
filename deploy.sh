@@ -72,7 +72,8 @@ SYNC_SCRIPT="${REPO_DIR}/scripts/sync-all.sh"
 chmod +x "${REPO_DIR}"/scripts/sync-*.sh
 
 # Add cron entry if not already present
-CRON_ENTRY="*/5 * * * * ${SYNC_SCRIPT} >> /var/log/company-os-sync.log 2>&1"
+LOG_FILE="${HOME}/company-os/sync.log"
+CRON_ENTRY="*/5 * * * * ${SYNC_SCRIPT} >> ${LOG_FILE} 2>&1"
 (crontab -l 2>/dev/null | grep -v "sync-all.sh"; echo "${CRON_ENTRY}") | crontab -
 
 echo ""
@@ -104,4 +105,4 @@ echo "     In Claude Code, run: /telegram:access pair <code>"
 echo "     Then lock it down: /telegram:access policy allowlist"
 echo ""
 echo "  Cron sync runs every 5 minutes."
-echo "  Logs: /var/log/company-os-sync.log"
+echo "  Logs: ~/company-os/sync.log"
