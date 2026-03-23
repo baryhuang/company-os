@@ -66,26 +66,29 @@ else
     echo "    aws configure"
 fi
 
-# 7. Install cron jobs
-echo "[7/7] Installing cron jobs (every 5 minutes)..."
-SYNC_SCRIPT="${REPO_DIR}/scripts/sync-all.sh"
+# 7. Install sync service (user-level systemd, no root needed)
+echo "[7/7] Installing sync service..."
 chmod +x "${REPO_DIR}"/scripts/sync-*.sh
 
-# Add cron entry if not already present
-LOG_FILE="${HOME}/company-os/sync.log"
-CRON_ENTRY="*/5 * * * * ${SYNC_SCRIPT} >> ${LOG_FILE} 2>&1"
-(crontab -l 2>/dev/null | grep -v "sync-all.sh"; echo "${CRON_ENTRY}") | crontab -
+mkdir -p ~/.config/systemd/user
+cp "${REPO_DIR}/systemd/company-os-sync.service" ~/.config/systemd/user/
 
-# Verify cron was installed
-if crontab -l 2>/dev/null | grep -q "sync-all.sh"; then
-    echo "  Cron job installed successfully:"
-    crontab -l | grep "sync-all.sh"
+systemctl --user daemon-reload
+systemctl --user enable company-os-sync.service
+systemctl --user start company-os-sync.service
+
+# Verify service is running
+if systemctl --user is-active --quiet company-os-sync.service; then
+    echo "  Sync service installed and running"
 else
-    echo "  ERROR: Cron job was not installed. Add it manually:"
-    echo "    crontab -e"
-    echo "    ${CRON_ENTRY}"
+    echo "  ERROR: Sync service failed to start. Check with:"
+    echo "    systemctl --user status company-os-sync.service"
+    echo "    journalctl --user -u company-os-sync.service"
     exit 1
 fi
+
+# Enable lingering so service runs even when user is not logged in
+loginctl enable-linger "$(whoami)" 2>/dev/null || echo "  Note: could not enable linger (service will stop on logout)"
 
 echo ""
 echo "=== Deployment Complete ==="
@@ -115,5 +118,5 @@ echo "     Send any message to your bot in Telegram"
 echo "     In Claude Code, run: /telegram:access pair <code>"
 echo "     Then lock it down: /telegram:access policy allowlist"
 echo ""
-echo "  Cron sync runs every 5 minutes."
-echo "  Logs: ~/company-os/sync.log"
+echo "  Sync service runs every 5 minutes."
+echo "  Logs: journalctl --user -u company-os-sync.service -f"
