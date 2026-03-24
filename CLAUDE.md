@@ -26,6 +26,19 @@ cd web && bun install && bun run dev  # dashboard on :5173, proxies /api to :808
 # Frontend build
 cd web && bun run build               # outputs to web/dist/
 
+# Deploy web to InsForge (uses MCP tool mcp__insforge-company-os__create-deployment)
+# sourceDirectory: /Users/buryhuang/git/ai-meeting-notes-agent/web
+
+# Build + release desktop DMG (ALWAYS bump version in desktop/package.json first)
+# 1. Bump "version" in desktop/package.json
+# 2. Build web:  cd web && bun run build
+# 3. Build DMG:  cd desktop && bun run dist:mac   # outputs to desktop/dist/*.dmg
+# 4. Release:
+gh release create v<VERSION> \
+  "desktop/dist/Company OS-<VERSION>-arm64.dmg" \
+  "desktop/dist/Company OS-<VERSION>.dmg" \
+  --title "v<VERSION>" --notes "changelog here"
+
 # Docker
 docker compose up --build             # bot + dashboard on :8080
 
@@ -92,6 +105,11 @@ claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-per
 - `scripts/migrate-atlas-to-nodes.ts` — One-time migration to flat node schema
 - `scripts/lib/flatten-tree.ts` — Shared tree flatten/assemble utilities, `AtlasNodeRow` type
 - `scripts/rclone-sync.sh` — Pull files from / push transcripts to Google Drive
+
+### Desktop (`desktop/`) — Electron macOS app
+- `desktop/main.js` — Electron main process, loads web/dist
+- `desktop/preload.js` — Preload script for IPC bridge
+- `desktop/package.json` — Electron-builder config, version, DMG settings
 
 ### Root (standalone tools)
 - `transcribe.py` — CLI entry point, handles language detection and file discovery
