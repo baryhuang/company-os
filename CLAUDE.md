@@ -60,15 +60,48 @@ chmod +x setup_server.sh && ./setup_server.sh
 # Company OS agent deployment (Ubuntu)
 chmod +x deploy.sh && ./deploy.sh
 
-# S3 sync (runs via cron every 5 min, or manually)
+# S3 sync — Linux (runs via cron every 5 min, or manually)
 scripts/sync-all.sh              # run all syncs
 scripts/sync-transcripts.sh      # notesly-transcripts → peakmojo-company-os
 scripts/sync-pull.sh             # S3 → local (by-dates, context, skills)
 scripts/sync-push-brain.sh       # local brain → S3
 
+# S3 sync — Mac (pulls brain → Google Drive shared folder, cron every 5 min)
+~/scripts/sync-company-brain.sh  # manual run
+tail -f /tmp/company-brain-sync.log  # monitor
+
 # Start Claude Code with Telegram channel (from ~/company-os/peakmojo)
 claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions
 ```
+
+### Mac S3 Sync Setup
+
+The Mac sync pulls `s3://peakmojo-company-os/peakmojo/brain/` → local Google Drive shared folder every 5 minutes.
+
+**Setup:**
+```bash
+# 1. Create the sync script (set BRAIN_LOCAL_DIR to your local path)
+mkdir -p ~/scripts
+cp scripts/sync-company-brain-mac.sh ~/scripts/sync-company-brain.sh
+chmod +x ~/scripts/sync-company-brain.sh
+# Edit ~/scripts/sync-company-brain.sh and set BRAIN_LOCAL_DIR, or export it in cron:
+# S3_BRAIN_SOURCE="s3://your-bucket/org/brain/"
+# BRAIN_LOCAL_DIR="/path/to/your/Company Brain"
+
+# 2. Test manually
+~/scripts/sync-company-brain.sh
+cat /tmp/company-brain-sync.log
+
+# 3. Add cron job (every 5 min)
+(crontab -l 2>/dev/null; echo "*/5 * * * * /Users/buryhuang/scripts/sync-company-brain.sh") | crontab -
+
+# 4. Verify
+crontab -l
+```
+
+**If sync fails silently:** Go to System Settings → Privacy & Security → Full Disk Access and add `/usr/sbin/cron`.
+
+**Requires:** AWS CLI configured with credentials that have access to `s3://peakmojo-company-os`.
 
 ## Architecture
 
