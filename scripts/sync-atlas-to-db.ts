@@ -13,7 +13,7 @@
  */
 
 import { execSync } from 'child_process';
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { basename, join } from 'path';
 import { flattenTree, type AtlasNodeRow, type TreeNode } from './lib/flatten-tree';
 import { createSnapshot } from './snapshot-atlas';
@@ -43,9 +43,139 @@ function getChangedKeys(): string[] {
 }
 
 function getAllKeys(): string[] {
-  return readdirSync(DATA_DIR)
+  const jsonKeys = readdirSync(DATA_DIR)
     .filter((f) => f.endsWith('.json') && f !== 'seed_atlas_documents.json')
     .map((f) => basename(f, '.json'));
+  const dirKeys = readdirSync(DATA_DIR)
+    .filter((f) => {
+      const full = join(DATA_DIR, f);
+      return statSync(full).isDirectory() && existsSync(join(full, '_index.md'));
+    });
+  return [...new Set([...jsonKeys, ...dirKeys])];
+}
+
+// ── Markdown directory parser ────────────────────────────────────
+
+/** Parse backtick-quoted filenames from a Raw/Notes line */
+function parseBacktickFiles(line: string): string[] {
+  const files: string[] = [];
+  const re = /`([^`]+)`/g;
+  let m;
+  while ((m = re.exec(line)) !== null) {
+    const val = m[1].trim();
+    // Handle "cat file1 file2" inside backticks
+    if (val.startsWith('cat ')) {
+      files.push(...val.slice(4).trim().split(/\s+/).filter(Boolean));
+    } else {
+      files.push(val);
+    }
+  }
+  return files;
+}
+
+/** Parse a conversation _index.md into a TreeNode with raw/notes fields */
+function parseConversationIndex(content: string, dateName: string): TreeNode {
+  const children: TreeNode[] = [];
+  const lines = content.split('\n');
+  let currentEntry: TreeNode | null = null;
+  let currentMeta: Record<string, unknown> = {};
+
+  for (const line of lines) {
+    // Match entry header: - **Title** | time: ... | type: ... | participants: ...
+    const headerMatch = line.match(/^- \*\*(.+?)\*\*(.*)$/);
+    if (headerMatch) {
+      // Save previous entry
+      if (currentEntry) {
+        Object.assign(currentEntry, currentMeta);
+        children.push(currentEntry);
+      }
+      const title = headerMatch[1];
+      const metaStr = headerMatch[2];
+      currentMeta = {};
+
+      // Parse pipe-separated metadata
+      const parts = metaStr.split('|').map(s => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        const [key, ...rest] = part.split(':');
+        if (key && rest.length > 0) {
+          const k = key.trim().toLowerCase();
+          const v = rest.join(':').trim();
+          if (k === 'time') currentMeta.time = v;
+          else if (k === 'type') currentMeta.type = v;
+          else if (k === 'participants') currentMeta.participants = v;
+          else if (k === 'conversations') currentMeta.conversations = v;
+        }
+      }
+
+      currentEntry = { name: title };
+      continue;
+    }
+
+    if (!currentEntry) continue;
+
+    const trimmed = line.trim();
+
+    // Match Raw: line
+    if (trimmed.startsWith('Raw:')) {
+      const files = parseBacktickFiles(trimmed);
+      if (files.length === 1) {
+        currentMeta.raw = files[0];
+      } else if (files.length > 1) {
+        // Preserve "cat file1 file2" format for multi-file transcripts
+        currentMeta.raw = `cat ${files.join(' ')}`;
+      }
+      continue;
+    }
+
+    // Match Notes:/Note: line — only treat as file refs if backtick files look like real filenames
+    if (trimmed.startsWith('Notes:') || trimmed.startsWith('Note:')) {
+      const files = parseBacktickFiles(trimmed).filter(f => /\.(txt|vtt|mp3|m4a|wav|ogg)$/.test(f) && f.length > 10);
+      if (files.length === 1) {
+        currentMeta.notes = files[0];
+      } else if (files.length > 1) {
+        currentMeta.notes = files;
+      }
+      continue;
+    }
+
+    // Description line (indented text that's not a metadata line)
+    if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('-')) {
+      currentEntry.desc = currentEntry.desc ? `${currentEntry.desc}\n${trimmed}` : trimmed;
+    }
+  }
+
+  // Don't forget the last entry
+  if (currentEntry) {
+    Object.assign(currentEntry, currentMeta);
+    children.push(currentEntry);
+  }
+
+  return { name: dateName, children, ...(children.length > 0 ? { conversations: String(children.length) } : {}) } as TreeNode;
+}
+
+/** Build tree from a markdown directory dimension (e.g. conversations/) */
+function loadMarkdownDirTree(dimPath: string): TreeNode | null {
+  const rootIndex = join(dimPath, '_index.md');
+  if (!existsSync(rootIndex)) return null;
+
+  const dimName = basename(dimPath);
+  const rootContent = readFileSync(rootIndex, 'utf-8');
+
+  // Parse root _index.md for date entries
+  const dateChildren: TreeNode[] = [];
+  const dateDirs = readdirSync(dimPath)
+    .filter(f => statSync(join(dimPath, f)).isDirectory())
+    .sort();
+
+  for (const dateDir of dateDirs) {
+    const dateIndex = join(dimPath, dateDir, '_index.md');
+    if (!existsSync(dateIndex)) continue;
+    const content = readFileSync(dateIndex, 'utf-8');
+    const dateNode = parseConversationIndex(content, dateDir);
+    dateChildren.push(dateNode);
+  }
+
+  return { name: dimName, children: dateChildren };
 }
 
 async function restFetch(path: string, opts: RequestInit = {}): Promise<Response> {
@@ -229,14 +359,24 @@ async function syncNodes(keys: string[], syncAll: boolean): Promise<{ inserted: 
   const nodeKeys = keys.filter((k) => !DOC_KEYS.has(k));
   if (nodeKeys.length === 0) return { inserted: 0, updated: 0, deleted: 0 };
 
-  // 1. Flatten local JSON into rows
+  // 1. Flatten local files into rows (JSON or markdown directories)
   const localRows = new Map<string, AtlasNodeRow>();
   for (const dim of nodeKeys) {
-    const file = join(DATA_DIR, `${dim}.json`);
+    const jsonFile = join(DATA_DIR, `${dim}.json`);
+    const dirPath = join(DATA_DIR, dim);
     try {
-      const tree = JSON.parse(readFileSync(file, 'utf-8')) as TreeNode;
-      for (const row of flattenTree(dim, tree, USER_ID)) {
-        localRows.set(rowKey(row), row);
+      let tree: TreeNode | null = null;
+      if (existsSync(jsonFile)) {
+        tree = JSON.parse(readFileSync(jsonFile, 'utf-8')) as TreeNode;
+      } else if (existsSync(dirPath) && statSync(dirPath).isDirectory()) {
+        tree = loadMarkdownDirTree(dirPath);
+      }
+      if (tree) {
+        for (const row of flattenTree(dim, tree, USER_ID)) {
+          localRows.set(rowKey(row), row);
+        }
+      } else {
+        console.warn(`  SKIP ${dim}: no JSON file or markdown directory found`);
       }
     } catch (err) {
       console.warn(`  SKIP ${dim}: ${err}`);

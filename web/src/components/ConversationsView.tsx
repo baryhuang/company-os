@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { ChevronRight, MessageSquare, Calendar, Eye, Download, FileText, StickyNote, Search, X, Sparkles } from 'lucide-react';
+import { ChevronRight, MessageSquare, Calendar, Eye, Download, Search, X, Sparkles } from 'lucide-react';
 import { getS3PresignedUrl, queryConversationsAI } from '../api';
 import type { TreeNode, AIQueryResult } from '../types';
 
@@ -24,69 +24,6 @@ function parseRawFiles(raw: unknown): string[] {
   return [raw];
 }
 
-function isS3File(filename: string): boolean {
-  return filename.startsWith('transcribe-bot_');
-}
-
-function FileButton({ filename, date, label, icon }: { filename: string; date: string; label: string; icon: 'transcript' | 'note' }) {
-  const [loading, setLoading] = useState(false);
-
-  const handleAction = useCallback(async (mode: 'view' | 'download') => {
-    const s3Key = `by-dates/${date}/${filename}`;
-    setLoading(true);
-    try {
-      const url = await getS3PresignedUrl(s3Key, mode);
-      window.open(url, '_blank');
-    } catch (err) {
-      console.error('Failed to get presigned URL:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [filename, date]);
-
-  if (!isS3File(filename)) {
-    return (
-      <div className="conv-file-row">
-        {icon === 'transcript' ? <FileText size={12} /> : <StickyNote size={12} />}
-        <span className="conv-file-name" title={filename}>{label}</span>
-        <span className="conv-file-na">not on S3</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="conv-file-row">
-      {icon === 'transcript' ? <FileText size={12} /> : <StickyNote size={12} />}
-      <span className="conv-file-name" title={filename}>{label}</span>
-      <button className="conv-file-btn view" onClick={() => handleAction('view')} disabled={loading} title="View">
-        <Eye size={12} /> View
-      </button>
-      <button className="conv-file-btn download" onClick={() => handleAction('download')} disabled={loading} title="Download">
-        <Download size={12} /> Download
-      </button>
-    </div>
-  );
-}
-
-function ConversationFiles({ node, date }: { node: TreeNode; date: string }) {
-  const raw = (node as any).raw;
-  const notesRaw = (node as any).notes;
-  const notes: string[] | undefined = typeof notesRaw === 'string' ? [notesRaw] : Array.isArray(notesRaw) ? notesRaw : undefined;
-  const rawFiles = parseRawFiles(raw);
-
-  if (rawFiles.length === 0 && (!notes || notes.length === 0)) return null;
-
-  return (
-    <div className="conv-files">
-      {rawFiles.map((f, i) => (
-        <FileButton key={`raw-${i}`} filename={f} date={date} label={rawFiles.length === 1 ? 'Transcript' : `Transcript ${i + 1}`} icon="transcript" />
-      ))}
-      {notes?.map((f, i) => (
-        <FileButton key={`note-${i}`} filename={f} date={date} label={notes.length === 1 ? 'Note' : `Note ${i + 1}`} icon="note" />
-      ))}
-    </div>
-  );
-}
 
 function ConversationItem({ node, defaultExpanded, filter }: { node: TreeNode; defaultExpanded?: boolean; filter: string }) {
   const [expanded, setExpanded] = useState(defaultExpanded ?? false);
@@ -146,32 +83,72 @@ function ConversationItem({ node, defaultExpanded, filter }: { node: TreeNode; d
   );
 }
 
+/** Extract raw filename from description text as fallback (handles "Raw: `filename`" in desc) */
+function extractRawFromDesc(desc: string | undefined): string | undefined {
+  if (!desc) return undefined;
+  const m = desc.match(/Raw:\s*`([^`]+)`/);
+  return m ? m[1] : undefined;
+}
+
+function EntryFileActions({ node, date }: { node: TreeNode; date: string }) {
+  const [loading, setLoading] = useState(false);
+  const raw = (node as any).raw || extractRawFromDesc(node.desc);
+  const rawFiles = parseRawFiles(raw);
+  const firstFile = rawFiles[0];
+  if (!firstFile) return null;
+
+  const handleAction = async (mode: 'view' | 'download', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const s3Key = `by-dates/${date}/${firstFile}`;
+    setLoading(true);
+    try {
+      const url = await getS3PresignedUrl(s3Key, mode);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('Failed to get presigned URL:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <span className="conv-entry-actions">
+      <button className="conv-file-btn view" onClick={(e) => handleAction('view', e)} disabled={loading} title="View transcript">
+        <Eye size={12} />
+      </button>
+      <button className="conv-file-btn download desktop-only" onClick={(e) => handleAction('download', e)} disabled={loading} title="Download transcript">
+        <Download size={12} />
+      </button>
+    </span>
+  );
+}
+
 function ConversationEntry({ node, date }: { node: TreeNode; date: string }) {
   const [expanded, setExpanded] = useState(false);
   const hasDetail = node.desc || (node.quotes && node.quotes.length > 0) || (node.children && node.children.length > 0);
-  const hasFiles = (node as any).raw || (node as any).notes;
+  const hasFiles = (node as any).raw || (node as any).notes || extractRawFromDesc(node.desc);
   const time = (node as any).time as string | undefined;
   const type = (node as any).type as string | undefined;
   const participants = (node as any).participants as string | undefined;
 
   return (
     <div className="conv-entry">
-      <button
+      <div
         className={`conv-entry-header${(hasDetail || hasFiles) ? ' clickable' : ''}`}
         onClick={() => (hasDetail || hasFiles) && setExpanded(!expanded)}
-        disabled={!(hasDetail || hasFiles)}
       >
         <MessageSquare size={14} className="conv-entry-icon" />
         <span className="conv-entry-name">{node.name}</span>
         {time && <span className="conv-entry-time">{time}</span>}
         {type && <span className="conv-entry-type">{type}</span>}
         {participants && <span className="conv-entry-participants">{participants}</span>}
+        <EntryFileActions node={node} date={date} />
         {(hasDetail || hasFiles) && <ChevronRight size={10} className={`conv-chevron-sm${expanded ? ' expanded' : ''}`} />}
-      </button>
+      </div>
       {expanded && (
         <div className="conv-entry-detail">
+          {participants && <div className="conv-entry-participants-mobile">{participants}</div>}
           {node.desc && <p className="conv-entry-desc">{node.desc}</p>}
-          <ConversationFiles node={node} date={date} />
           {node.quotes && node.quotes.length > 0 && (
             <div className="conv-entry-quotes">
               {node.quotes.map((q, i) => (

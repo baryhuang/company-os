@@ -2210,11 +2210,20 @@ body::before {
   overflow: hidden; text-overflow: ellipsis;
   max-width: 300px;
 }
+.conv-entry-actions {
+  display: inline-flex; align-items: center; gap: 4px;
+  flex-shrink: 0;
+}
 .conv-chevron-sm {
   color: var(--text3); flex-shrink: 0;
   opacity: 0.5; transition: transform 0.2s;
 }
 .conv-chevron-sm.expanded { transform: rotate(90deg); }
+.conv-entry-participants-mobile {
+  display: none;
+  font-size: 11px; color: var(--text3);
+  margin-bottom: 4px;
+}
 .conv-entry-detail {
   padding: 4px 16px 12px 56px;
   animation: detailFadeIn 0.15s ease;
@@ -2546,6 +2555,11 @@ body::before {
   /* ── Landscape header ── */
   .landscape-header h2 { font-size: 18px; }
   .landscape-toolbar { gap: 8px; }
+
+  /* ── Conversations: mobile adjustments ── */
+  .conv-file-btn.desktop-only { display: none; }
+  .conv-entry-participants { display: none; }
+  .conv-entry-participants-mobile { display: block; }
 }
 
 /* ── Electron desktop: window drag region ── */
