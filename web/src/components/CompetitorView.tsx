@@ -4,7 +4,6 @@ import { parseDateOrdinal, TimelineBar } from './MarkmapView';
 import { findDateIndex } from '../hooks/useTimelineCutoff';
 import type { TimelineRange } from '../hooks/useTimelineCutoff';
 import { queryCompetitorsAI } from '../api';
-import { ReactSearchAutocomplete } from 'react-search-autocomplete';
 
 interface CompetitorViewProps {
   data: LandscapeData;
@@ -218,36 +217,26 @@ function TableView({ competitors, onHover, onLeave }: {
 const HISTORY_KEY = 'ai-competitor-search-history';
 const MAX_HISTORY = 10;
 
-interface SearchItem {
+interface HistoryItem {
   id: number;
   name: string;
-  type: 'history' | 'suggestion';
 }
 
-const PRESET_SUGGESTIONS: SearchItem[] = [
-  { id: 1001, name: 'Which companies use AI for compliance?', type: 'suggestion' },
-  { id: 1002, name: 'High threat competitors targeting CNAs', type: 'suggestion' },
-  { id: 1003, name: 'Compare pricing models across competitors', type: 'suggestion' },
-  { id: 1004, name: 'Companies serving both CNA and RN markets', type: 'suggestion' },
-  { id: 1005, name: 'Well-funded competitors with AI capabilities', type: 'suggestion' },
-  { id: 1006, name: 'What are the key differentiators of top threats?', type: 'suggestion' },
-];
-
-function loadHistory(): SearchItem[] {
+function loadHistory(): HistoryItem[] {
   try {
     const raw = localStorage.getItem(HISTORY_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as SearchItem[];
+    return JSON.parse(raw) as HistoryItem[];
   } catch { return []; }
 }
 
-function saveHistory(items: SearchItem[]) {
+function saveHistory(items: HistoryItem[]) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, MAX_HISTORY)));
 }
 
 function addToHistory(query: string) {
   const history = loadHistory().filter(h => h.name !== query);
-  const newItem: SearchItem = { id: Date.now(), name: query, type: 'history' };
+  const newItem: HistoryItem = { id: Date.now(), name: query };
   saveHistory([newItem, ...history]);
 }
 
@@ -364,28 +353,30 @@ function AIResultModal({ result, competitors, onClose }: {
 
 /* ── Main component ─────────────────────────────────────── */
 
+/* ── Quick filter types ─────────────────────────────────── */
+
+type ThreatFilter = 'high' | 'medium' | 'low';
+type BoolFilter = 'uses_ai' | 'serves_cna' | 'serves_rn';
+
 export function CompetitorView({ data, timelineRange, onTimelineRangeChange }: CompetitorViewProps) {
   const [view, setView] = useState<'map' | 'table'>('map');
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // AI query state
-  const [aiQuery, setAiQuery] = useState('');
+  // Quick filter state
+  const [textFilter, setTextFilter] = useState('');
+  const [threatFilters, setThreatFilters] = useState<Set<ThreatFilter>>(new Set());
+  const [boolFilters, setBoolFilters] = useState<Set<BoolFilter>>(new Set());
+  const [sectionFilter, setSectionFilter] = useState<string>('');
+
+  // AI query state (uses textFilter as the shared input)
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AIQueryResult | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // Autocomplete items: history + suggestions
-  const [searchItems, setSearchItems] = useState<SearchItem[]>([]);
-
-  useEffect(() => {
-    setSearchItems([...loadHistory(), ...PRESET_SUGGESTIONS]);
-  }, []);
-
   const fireQuery = useCallback(async (query: string) => {
     if (!query.trim() || aiLoading) return;
     addToHistory(query);
-    setSearchItems([...loadHistory(), ...PRESET_SUGGESTIONS]);
     setAiLoading(true);
     setAiError(null);
     try {
@@ -443,7 +434,66 @@ export function CompetitorView({ data, timelineRange, onTimelineRangeChange }: C
     });
   }, [data.competitors, allDates, startIndex, endIndex, getDate]);
 
-  const sections = useMemo(() => groupBySection(filtered), [filtered]);
+  // Apply quick filters on top of date-filtered results
+  const quickFiltered = useMemo(() => {
+    let result = filtered;
+    // Text filter (name, category, primary_focus)
+    if (textFilter.trim()) {
+      const q = textFilter.toLowerCase();
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        (c.category || '').toLowerCase().includes(q) ||
+        (c.primary_focus || '').toLowerCase().includes(q) ||
+        (c.subcategory || '').toLowerCase().includes(q)
+      );
+    }
+    // Threat level filter
+    if (threatFilters.size > 0) {
+      result = result.filter(c => threatFilters.has(c.threat));
+    }
+    // Boolean attribute filters (AND — must match all selected)
+    if (boolFilters.has('uses_ai')) result = result.filter(c => c.uses_ai);
+    if (boolFilters.has('serves_cna')) result = result.filter(c => c.serves_cna);
+    if (boolFilters.has('serves_rn')) result = result.filter(c => c.serves_rn);
+    // Section filter
+    if (sectionFilter) {
+      result = result.filter(c => c.section === sectionFilter);
+    }
+    return result;
+  }, [filtered, textFilter, threatFilters, boolFilters, sectionFilter]);
+
+  // Unique sections for dropdown
+  const sectionOptions = useMemo(() => {
+    const set = new Set(filtered.map(c => c.section));
+    return Array.from(set).sort();
+  }, [filtered]);
+
+  const hasActiveFilters = textFilter.trim() || threatFilters.size > 0 || boolFilters.size > 0 || sectionFilter;
+
+  const toggleThreat = (t: ThreatFilter) => {
+    setThreatFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t); else next.add(t);
+      return next;
+    });
+  };
+
+  const toggleBool = (b: BoolFilter) => {
+    setBoolFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(b)) next.delete(b); else next.add(b);
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setTextFilter('');
+    setThreatFilters(new Set());
+    setBoolFilters(new Set());
+    setSectionFilter('');
+  };
+
+  const sections = useMemo(() => groupBySection(quickFiltered), [quickFiltered]);
 
   const showTooltip = useCallback((row: CompetitorRow, e: React.MouseEvent) => {
     clearTimeout(hideTimer.current);
@@ -457,15 +507,6 @@ export function CompetitorView({ data, timelineRange, onTimelineRangeChange }: C
 
   const { meta } = data;
 
-  const formatResult = (item: SearchItem) => (
-    <div className="ai-search-result-item">
-      <span className={`ai-search-icon ${item.type}`}>
-        {item.type === 'history' ? '\u23F3' : '\u2728'}
-      </span>
-      <span>{item.name}</span>
-    </div>
-  );
-
   return (
     <div className="competitor-view">
       <div className="competitor-scroll">
@@ -474,52 +515,70 @@ export function CompetitorView({ data, timelineRange, onTimelineRangeChange }: C
           <p>{meta.subtitle}{meta.last_update ? ` · Updated ${meta.last_update}` : ''}</p>
         </div>
 
-        <div className="ai-query-bar">
-          {aiLoading && (
-            <div className="ai-query-loading-overlay">
-              <div className="ai-query-spinner" />
-              <span>Analyzing competitors...</span>
-            </div>
-          )}
-          <ReactSearchAutocomplete<SearchItem>
-            items={searchItems}
-            onSearch={(string) => setAiQuery(string)}
-            onSelect={(item) => fireQuery(item.name)}
-            onClear={() => setAiQuery('')}
-            inputSearchString={aiQuery}
-            placeholder="Ask AI about competitors..."
-            formatResult={formatResult}
-            showItemsOnFocus
-            maxResults={8}
-            styling={{
-              height: '44px',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--surface)',
-              color: 'var(--text)',
-              fontSize: '13px',
-              fontFamily: 'var(--font-body)',
-              iconColor: 'var(--purple)',
-              placeholderColor: 'var(--text3)',
-              hoverBackgroundColor: 'var(--purple-light)',
-              boxShadow: 'none',
-              clearIconMargin: '3px 8px 0 0',
-              zIndex: 10,
-            }}
-            fuseOptions={{ keys: ['name'], threshold: 0.4 }}
-          />
-          <button
-            className="ai-query-btn"
-            disabled={aiLoading || !aiQuery.trim()}
-            onClick={() => fireQuery(aiQuery)}
-          >
-            Ask AI
-          </button>
+        <div className="competitor-quick-filters">
+          <div className="ai-query-bar">
+            {aiLoading && (
+              <div className="ai-query-loading-overlay">
+                <div className="ai-query-spinner" />
+                <span>Analyzing competitors...</span>
+              </div>
+            )}
+            <input
+              type="text"
+              className="competitor-text-filter"
+              placeholder="Filter by name or ask AI..."
+              value={textFilter}
+              onChange={(e) => setTextFilter(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') fireQuery(textFilter); }}
+            />
+            <button
+              className="ai-query-btn"
+              disabled={aiLoading || !textFilter.trim()}
+              onClick={() => fireQuery(textFilter)}
+            >
+              Ask AI
+            </button>
+          </div>
+          {aiError && <div className="ai-query-error">{aiError}</div>}
+          <div className="competitor-filter-chips">
+            <span className="competitor-filter-label">Threat:</span>
+            {(['high', 'medium', 'low'] as ThreatFilter[]).map(t => (
+              <button
+                key={t}
+                className={`competitor-filter-chip threat-${t}${threatFilters.has(t) ? ' active' : ''}`}
+                onClick={() => toggleThreat(t)}
+              >
+                {t}
+              </button>
+            ))}
+            <span className="competitor-filter-sep" />
+            {([['uses_ai', 'AI'], ['serves_cna', 'CNA'], ['serves_rn', 'RN']] as [BoolFilter, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                className={`competitor-filter-chip bool${boolFilters.has(key) ? ' active' : ''}`}
+                onClick={() => toggleBool(key)}
+              >
+                {label}
+              </button>
+            ))}
+            <select
+              className="competitor-section-select"
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+            >
+              <option value="">All sections</option>
+              {sectionOptions.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            {hasActiveFilters && (
+              <button className="competitor-filter-clear" onClick={clearFilters}>Clear</button>
+            )}
+          </div>
         </div>
-        {aiError && <div className="ai-query-error">{aiError}</div>}
 
         <div className="landscape-toolbar">
-          <span className="landscape-count">{filtered.length} companies{allDates.length > 1 ? ` (of ${data.competitors.length})` : ''}</span>
+          <span className="landscape-count">{quickFiltered.length} companies{quickFiltered.length !== data.competitors.length ? ` (of ${data.competitors.length})` : ''}</span>
           <div className="view-toggle">
             <button className={view === 'map' ? 'active' : ''} onClick={() => setView('map')}>Map</button>
             <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}>Table</button>
@@ -529,7 +588,7 @@ export function CompetitorView({ data, timelineRange, onTimelineRangeChange }: C
         {view === 'map' ? (
           <MapView sections={sections} onHover={showTooltip} onLeave={hideTooltip} />
         ) : (
-          <TableView competitors={filtered} onHover={showTooltip} onLeave={hideTooltip} />
+          <TableView competitors={quickFiltered} onHover={showTooltip} onLeave={hideTooltip} />
         )}
 
       </div>

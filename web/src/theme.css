@@ -1434,6 +1434,92 @@ body::before {
   border-radius: 6px;
 }
 
+/* ── Competitor Quick Filters ──────────────── */
+.competitor-quick-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.competitor-text-filter {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-body);
+  outline: none;
+}
+.competitor-text-filter:focus {
+  border-color: var(--purple);
+}
+.competitor-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.competitor-filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.competitor-filter-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 2px;
+}
+.competitor-filter-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.competitor-filter-chip:hover {
+  background: var(--surface-hover);
+}
+.competitor-filter-chip.active {
+  color: #fff;
+  border-color: transparent;
+}
+.competitor-filter-chip.threat-high.active { background: var(--red); }
+.competitor-filter-chip.threat-medium.active { background: var(--orange); }
+.competitor-filter-chip.threat-low.active { background: var(--text3); }
+.competitor-filter-chip.bool.active { background: var(--purple); }
+.competitor-section-select {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  cursor: pointer;
+  max-width: 200px;
+}
+.competitor-filter-clear {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--red);
+  cursor: pointer;
+  font-weight: 600;
+}
+.competitor-filter-clear:hover {
+  background: var(--red-light);
+}
+
 /* Search autocomplete dropdown styling */
 .ai-search-result-item {
   display: flex; align-items: center; gap: 8px;
