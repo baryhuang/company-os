@@ -101,5 +101,37 @@ export function useAtlasData(userId: string): AtlasData {
     }
   };
 
-  return { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, tasksData, conversationsData, customerDiscoveryData, loading, error, refetchTasks };
+  /** Refetch a specific view's data from the DB without full page reload. */
+  const refetchView = async (viewKey: string): Promise<void> => {
+    try {
+      switch (viewKey) {
+        case 'tasks':
+        case 'todo':
+          setTasksData(await fetchDimensionData(userId, 'tasks'));
+          break;
+        case 'conversations':
+          setConversationsData(await fetchDimensionData(userId, 'conversations'));
+          break;
+        case 'customer_discovery':
+          setCustomerDiscoveryData(await fetchDimensionData(userId, 'customer_discovery'));
+          break;
+        case 'landscape':
+          setLandscapeData(await fetchLandscapeData(userId));
+          break;
+        case 'progress':
+          setProgressData(await fetchProgressData(userId));
+          break;
+        default: {
+          // Dimension by id (market, product, build, etc.)
+          const data = await fetchDimensionData(userId, viewKey);
+          setDimensionsData(prev => ({ ...prev, [viewKey]: data }));
+          break;
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to refetch ${viewKey}:`, err);
+    }
+  };
+
+  return { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, tasksData, conversationsData, customerDiscoveryData, loading, error, refetchTasks, refetchView };
 }

@@ -28,7 +28,7 @@ function AuthenticatedApp() {
   const { user } = useUser();
   const { workspace, workspaces, loading: wsLoading, needsPicker, selectWorkspace } = useWorkspace(user ?? null);
   const userId = workspace?.ownerId ?? user!.id;
-  const { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, tasksData, conversationsData, customerDiscoveryData, loading, error, refetchTasks } = useAtlasData(userId);
+  const { dimensions, dimensionsData, landscapeData, progressData, appointmentsData, tasksData, conversationsData, customerDiscoveryData, loading, error, refetchTasks, refetchView } = useAtlasData(userId);
   const [currentView, setCurrentView] = useState<ViewType>('todo');
   const [currentDimIndex, setCurrentDimIndex] = useState(0);
   const [expandLevel, setExpandLevel] = useState(-1);
@@ -57,6 +57,28 @@ function AuthenticatedApp() {
       setSavedRange(null);
     }
   }, [timelineRange, savedRange, setTimelineRange]);
+
+  const handleRefresh = useCallback(async () => {
+    switch (currentView) {
+      case 'todo': return refetchView('tasks');
+      case 'conversations': return refetchView('conversations');
+      case 'vem': return refetchView('vision_execution_map');
+      case 'competitor': return refetchView('landscape');
+      case 'partners': return refetchView('strategic-partners');
+      case 'people': return refetchView('people-network');
+      case 'okr': return refetchView('okr_kpi');
+      case 'customer-discovery': return refetchView('customer_discovery');
+      case 'd3': {
+        const dim = dimensions[currentDimIndex];
+        if (dim) {
+          await refetchView(dim.id);
+          if (dim.id === 'build') await refetchView('progress');
+        }
+        return;
+      }
+      default: return;
+    }
+  }, [currentView, currentDimIndex, dimensions, refetchView]);
 
   const handleSwitch = useCallback((view: ViewType, dimIndex?: number) => {
     setCurrentView(view);
@@ -116,6 +138,7 @@ function AuthenticatedApp() {
               onExpandLevel={handleExpandLevel}
               timelineRange={timelineRange}
               onResetTimeline={handleResetTimeline}
+              onRefresh={currentView !== 'settings' && currentView !== 'tasks' ? handleRefresh : undefined}
               onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
               onChatToggle={() => setChatOpen(!chatOpen)}
             />

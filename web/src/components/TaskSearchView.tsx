@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { searchTasks, fetchTasks } from '../api';
+import { renderMarkdown } from '../renderMarkdown';
 import type { LinearTask } from '../types';
 
 type SortMode = 'date' | 'relevance';
@@ -256,7 +257,7 @@ export function TaskSearchView() {
                       <td className="task-table-title">
                         {task.Title}
                         {task.Description && (
-                          <span className="task-table-desc">{task.Description.slice(0, 120)}{task.Description.length > 120 ? '...' : ''}</span>
+                          <span className="task-table-desc" dangerouslySetInnerHTML={{ __html: renderMarkdown(task.Description) }} />
                         )}
                       </td>
                       <td>

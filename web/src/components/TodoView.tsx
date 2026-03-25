@@ -3,6 +3,7 @@ import { ChevronRight, Circle, CheckCircle2, Clock, Mail, CalendarCheck, Setting
 import { collectDates, parseDateOrdinal, TimelineBar } from './MarkmapView';
 import { findDateIndex } from '../hooks/useTimelineCutoff';
 import { updateNodeStatus } from '../api';
+import { renderMarkdown } from '../renderMarkdown';
 import type { TimelineRange } from '../hooks/useTimelineCutoff';
 import type { TreeNode } from '../types';
 
@@ -111,7 +112,7 @@ function TodoItem({ node }: { node: TreeNode }) {
             <span className="todo-detail-tag file"><FileText size={10} /> {file}</span>
           )}
           {node.desc && (
-            <span className="todo-detail-desc">{node.desc}</span>
+            <span className="todo-detail-desc" dangerouslySetInnerHTML={{ __html: renderMarkdown(node.desc) }} />
           )}
         </div>
       )}
@@ -259,7 +260,7 @@ function ItemRow({ item, onStatusChange }: { item: FlatItem; onStatusChange: (no
           <td></td>
           <td colSpan={4}>
             <div className="todo-detail-content">
-              {node.desc && <p className="todo-detail-desc">{node.desc}</p>}
+              {node.desc && <p className="todo-detail-desc" dangerouslySetInnerHTML={{ __html: renderMarkdown(node.desc) }} />}
               {due && <span className="todo-detail-tag due"><CalendarDays size={10} /> Due {due}</span>}
               {file && <span className="todo-detail-tag file"><FileText size={10} /> {file}</span>}
             </div>

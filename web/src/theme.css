@@ -273,6 +273,20 @@ body::before {
   border-color: var(--green);
   box-shadow: 0 2px 8px rgba(45,122,62,0.25);
 }
+.topbar-refresh {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px !important;
+  min-width: unset !important;
+}
+.topbar-refresh.spinning svg {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .timeline-toggle {
   margin-left: 8px;
   cursor: pointer;
@@ -1253,6 +1267,9 @@ body::before {
 .task-table-id { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text3); white-space: nowrap; }
 .task-table-title { font-weight: 500; color: var(--text1); max-width: 340px; }
 .task-table-desc { display: block; font-size: 12px; color: var(--text3); font-weight: 400; margin-top: 2px; line-height: 1.3; }
+.task-table-desc p { margin: 0 0 4px; }
+.task-table-desc ul, .task-table-desc ol { margin: 0 0 4px; padding-left: 16px; }
+.task-table-desc h3, .task-table-desc h4 { font-size: 12px; margin: 4px 0 2px; color: var(--text2); }
 .task-table-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .task-tag {
   font-size: 11px;
@@ -2044,6 +2061,9 @@ body::before {
   font-size: 11px; color: var(--text3);
   line-height: 1.5; margin-top: 2px;
 }
+.todo-detail-desc p { margin: 0 0 4px; }
+.todo-detail-desc ul, .todo-detail-desc ol { margin: 0 0 4px; padding-left: 18px; }
+.todo-detail-desc h3, .todo-detail-desc h4 { font-size: 12px; margin: 4px 0 2px; color: var(--text2); }
 
 /* ── Todo Table ──────────────────────────────── */
 .todo-table {
@@ -2103,8 +2123,10 @@ body::before {
   font-size: 13px;
   color: var(--text2);
   line-height: 1.5;
-  white-space: pre-wrap;
 }
+.todo-detail-content .todo-detail-desc p { margin: 0 0 6px; }
+.todo-detail-content .todo-detail-desc ul, .todo-detail-content .todo-detail-desc ol { margin: 0 0 6px; padding-left: 20px; }
+.todo-detail-content .todo-detail-desc h3, .todo-detail-content .todo-detail-desc h4 { font-size: 13px; margin: 6px 0 3px; color: var(--text); }
 .todo-table-status { width: 32px; text-align: center; }
 .todo-table-name { font-weight: 500; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .todo-table-tag {}

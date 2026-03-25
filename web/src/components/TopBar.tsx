@@ -1,4 +1,5 @@
-import { CalendarRange, CalendarDays, Menu, MessageCircle } from 'lucide-react';
+import { useState } from 'react';
+import { CalendarRange, CalendarDays, Menu, MessageCircle, RefreshCw } from 'lucide-react';
 import type { ViewType, DimensionMeta } from '../types';
 import type { TimelineRange } from '../hooks/useTimelineCutoff';
 
@@ -10,11 +11,23 @@ interface TopBarProps {
   onExpandLevel: (level: number) => void;
   timelineRange: TimelineRange;
   onResetTimeline: () => void;
+  onRefresh?: () => Promise<void>;
   onMenuToggle?: () => void;
   onChatToggle?: () => void;
 }
 
-export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel, timelineRange, onResetTimeline, onMenuToggle, onChatToggle }: TopBarProps) {
+export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, onExpandLevel, timelineRange, onResetTimeline, onRefresh, onMenuToggle, onChatToggle }: TopBarProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefresh || refreshing) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   // Views that have their own header — hide the topbar title block
   const viewsWithOwnHeader = new Set<ViewType>(['conversations', 'people', 'partners', 'okr', 'settings', 'tasks']);
   const hideTitle = viewsWithOwnHeader.has(currentView);
@@ -39,7 +52,7 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
 
   const showButtons = currentView === 'd3';
   const showTimelineToggle = ['todo', 'vem', 'd3', 'competitor', 'okr'].includes(currentView);
-  const showTopbar = !hideTitle || showButtons || showTimelineToggle;
+  const showTopbar = !hideTitle || showButtons || showTimelineToggle || !!onRefresh;
   const isFiltered = timelineRange.startOrd !== null || timelineRange.endOrd !== null;
 
   const levelButtons = [
@@ -82,6 +95,16 @@ export function TopBar({ currentView, currentDimIndex, dimensions, expandLevel, 
               Fit View
             </button>
           </>
+        )}
+        {onRefresh && (
+          <button
+            className={`btn topbar-refresh${refreshing ? ' spinning' : ''}`}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh data"
+          >
+            <RefreshCw size={14} />
+          </button>
         )}
         {showTimelineToggle && (
           <div className="timeline-toggle" onClick={onResetTimeline} title={isFiltered ? 'Show all time' : 'Restore filtered range'}>
