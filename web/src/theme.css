@@ -1344,6 +1344,32 @@ body::before {
 .task-blocked { color: var(--red); }
 .task-dup { color: var(--orange); }
 
+.task-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0 4px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.task-pagination button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.task-pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.task-pagination button:not(:disabled):hover {
+  background: var(--surface-hover);
+}
+
 /* ── AI Query Bar ────────────────────────────── */
 .ai-query-bar {
   display: flex; gap: 8px;

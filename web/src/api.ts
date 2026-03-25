@@ -146,6 +146,36 @@ export async function fetchLandscapeData(userId: string): Promise<LandscapeData>
   return { meta, competitors };
 }
 
+// ── Task browse (direct DB query, no embeddings) ─────────────────
+
+export async function fetchTasks(
+  filters?: { statuses?: string[]; priority?: string; project?: string; limit?: number; offset?: number },
+): Promise<{ tasks: LinearTask[]; total: number }> {
+  let query = insforge.database
+    .from('linear_tasks')
+    .select('ID,Title,Description,Status,Priority,Project,Assignee,Labels,Created,Updated,"Due Date","Parent issue","Related to","Blocked by","Duplicate of"', { count: 'exact' });
+
+  if (filters?.statuses && filters.statuses.length > 0) {
+    query = query.in('Status', filters.statuses);
+  }
+  if (filters?.priority) {
+    query = query.eq('Priority', filters.priority);
+  }
+  if (filters?.project) {
+    query = query.ilike('Project', `%${filters.project}%`);
+  }
+
+  query = query.order('Updated', { ascending: false });
+
+  const limit = filters?.limit ?? 50;
+  const offset = filters?.offset ?? 0;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(`Fetch tasks failed: ${error.message}`);
+  return { tasks: (data ?? []) as LinearTask[], total: count ?? 0 };
+}
+
 // ── Task search ───────────────────────────────────────────────────
 
 export async function searchTasks(

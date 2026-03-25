@@ -130,6 +130,21 @@ interface FlatItem {
   category: string;
 }
 
+/** Recursively collect actionable items from a category subtree.
+ *  "origin" nodes are structural groupings — recurse into their children.
+ *  Non-origin nodes (or leaf nodes) are actionable items to display. */
+function collectItems(node: TreeNode, category: string): FlatItem[] {
+  const status = node.status || '';
+  const isGrouping = status === 'origin' || status === '';
+  const hasChildren = node.children && node.children.length > 0;
+
+  if (isGrouping && hasChildren) {
+    return node.children!.flatMap(child => collectItems(child, category));
+  }
+
+  return [{ node, category }];
+}
+
 function SectionHeader({ icon, label, count, expanded, onToggle }: {
   icon: React.ReactNode;
   label: string;
@@ -314,16 +329,17 @@ export function TodoView({ treeData, userId, onRefetch, timelineRange, onTimelin
 
   // Flatten all items with their category, apply overrides, sort by date descending, split into todo/pending/done
   const { activeItems, pendingItems, doneItems } = useMemo(() => {
-    const all: FlatItem[] = [];
+    const raw: FlatItem[] = [];
     for (const cat of categories) {
-      for (const child of cat.children ?? []) {
-        // Apply optimistic status override if present
-        const overridden = child._path && statusOverrides[child._path]
-          ? { ...child, status: statusOverrides[child._path] }
-          : child;
-        all.push({ node: overridden, category: cat.name });
-      }
+      raw.push(...collectItems(cat, cat.name));
     }
+    // Apply optimistic status overrides
+    const all = raw.map(item => {
+      if (item.node._path && statusOverrides[item.node._path]) {
+        return { ...item, node: { ...item.node, status: statusOverrides[item.node._path] } };
+      }
+      return item;
+    });
     // Sort by date descending (most recent first)
     all.sort((a, b) => {
       const aOrd = parseDateOrdinal(a.node.date || '') ?? 0;
