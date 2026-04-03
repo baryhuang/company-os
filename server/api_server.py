@@ -1,6 +1,8 @@
-"""FastAPI app — /api/status, /api/health, /api/atlas/*, and SPA static file serving."""
+"""FastAPI app — /api/status, /api/health, /api/atlas/*, /api/upload, and SPA static file serving."""
 
+import datetime as dt
 import json
+import logging
 import os
 import platform
 import re
@@ -9,12 +11,15 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.bot_state import state
+from server.storage import get_s3_client, save_file, storage_prefix
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Company Brain API", docs_url=None, redoc_url=None)
 
@@ -170,6 +175,45 @@ async def atlas_put_data(name: str, request: Request):
     data_file = ATLAS_DATA_DIR / f"{name}.json"
     data_file.write_text(json.dumps(body, ensure_ascii=False, indent=2))
     return {"status": "saved", "file": f"{name}.json"}
+
+
+# ── File Upload API ────────────────────────────────────────────
+
+@app.post("/api/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    username: str = Form(default="api"),
+):
+    """Accept a single file upload, save to local + S3, and trigger the BubbleLab webhook.
+
+    This provides the same storage + webhook flow as the Telegram bot, but via HTTP.
+
+    - file: the file to upload (multipart form-data)
+    - username: optional uploader name (defaults to "api")
+    """
+    s3_client, s3_bucket = get_s3_client()
+    bot_name = os.getenv("BOT_NAME", "transcribe-bot")
+
+    timestamp = dt.datetime.now().strftime("%H%M%S")
+    prefix = storage_prefix(bot_name, username, timestamp)
+
+    filename = file.filename or "upload"
+    file_data = await file.read()
+
+    local_path = save_file(s3_client, s3_bucket, prefix, filename, file_data)
+
+    state.file_count += 1
+    state.record_activity()
+
+    logger.info(f"API upload: {filename} from {username} → {prefix}/{filename}")
+
+    return {
+        "status": "saved",
+        "filename": filename,
+        "prefix": prefix,
+        "local_path": local_path,
+        "s3": bool(s3_client),
+    }
 
 
 # ── Static file serving ───────────────────────────────────────
