@@ -357,7 +357,11 @@ jobs:
                 --cluster ${{ env.APP_NAME }} \
                 --service ${{ env.APP_NAME }} \
                 --region ${{ env.AWS_REGION }}
-              sleep 10
+              echo "Waiting for service to drain..."
+              aws ecs wait services-inactive \
+                --cluster ${{ env.APP_NAME }} \
+                --services ${{ env.APP_NAME }} \
+                --region ${{ env.AWS_REGION }} || sleep 30
             fi
 
             echo "Creating service with ALB..."
