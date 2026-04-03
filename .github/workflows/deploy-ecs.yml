@@ -153,7 +153,7 @@ jobs:
           TG_ARN=$(aws elbv2 describe-target-groups \
             --names "${{ env.APP_NAME }}-tg" \
             --region ${{ env.AWS_REGION }} \
-            --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
+            --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null || echo "")
           if [ "$TG_ARN" = "None" ] || [ -z "$TG_ARN" ]; then
             TG_ARN=$(aws elbv2 create-target-group \
               --name "${{ env.APP_NAME }}-tg" \
@@ -173,7 +173,7 @@ jobs:
           ALB_ARN=$(aws elbv2 describe-load-balancers \
             --names "${{ env.APP_NAME }}-alb" \
             --region ${{ env.AWS_REGION }} \
-            --query 'LoadBalancers[0].LoadBalancerArn' --output text 2>/dev/null)
+            --query 'LoadBalancers[0].LoadBalancerArn' --output text 2>/dev/null || echo "")
           if [ "$ALB_ARN" = "None" ] || [ -z "$ALB_ARN" ]; then
             ALB_ARN=$(aws elbv2 create-load-balancer \
               --name "${{ env.APP_NAME }}-alb" \
@@ -192,7 +192,7 @@ jobs:
           LISTENER_ARN=$(aws elbv2 describe-listeners \
             --load-balancer-arn "$ALB_ARN" \
             --region ${{ env.AWS_REGION }} \
-            --query 'Listeners[0].ListenerArn' --output text 2>/dev/null)
+            --query 'Listeners[0].ListenerArn' --output text 2>/dev/null || echo "")
           if [ "$LISTENER_ARN" = "None" ] || [ -z "$LISTENER_ARN" ]; then
             aws elbv2 create-listener \
               --load-balancer-arn "$ALB_ARN" \
