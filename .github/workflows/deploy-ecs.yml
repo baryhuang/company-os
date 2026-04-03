@@ -112,6 +112,103 @@ jobs:
               ]
             }' 2>/dev/null || true
 
+      - name: Ensure ALB and target group
+        id: alb
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --region ${{ env.AWS_REGION }} \
+            --query 'Vpcs[0].VpcId' --output text)
+          SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --region ${{ env.AWS_REGION }} \
+            --query 'Subnets[*].SubnetId' --output text | tr '\t' ',')
+
+          # Create or get ALB security group (allows HTTP 80 from anywhere)
+          ALB_SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=${{ env.APP_NAME }}-alb-sg" "Name=vpc-id,Values=$VPC_ID" \
+            --region ${{ env.AWS_REGION }} --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null)
+          if [ "$ALB_SG_ID" = "None" ] || [ -z "$ALB_SG_ID" ]; then
+            ALB_SG_ID=$(aws ec2 create-security-group \
+              --group-name "${{ env.APP_NAME }}-alb-sg" \
+              --description "ALB security group for ${{ env.APP_NAME }}" \
+              --vpc-id "$VPC_ID" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'GroupId' --output text)
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$ALB_SG_ID" \
+              --protocol tcp --port 80 --cidr 0.0.0.0/0 \
+              --region ${{ env.AWS_REGION }}
+          fi
+          echo "ALB_SG_ID=$ALB_SG_ID" >> $GITHUB_OUTPUT
+
+          # Ensure ECS task SG allows traffic from ALB SG on port 8080
+          ECS_SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=${{ env.APP_NAME }}-sg" "Name=vpc-id,Values=$VPC_ID" \
+            --region ${{ env.AWS_REGION }} --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null)
+          if [ "$ECS_SG_ID" != "None" ] && [ -n "$ECS_SG_ID" ]; then
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$ECS_SG_ID" \
+              --protocol tcp --port 8080 --source-group "$ALB_SG_ID" \
+              --region ${{ env.AWS_REGION }} 2>/dev/null || true
+          fi
+
+          # Create or get target group (IP type for Fargate awsvpc)
+          TG_ARN=$(aws elbv2 describe-target-groups \
+            --names "${{ env.APP_NAME }}-tg" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'TargetGroups[0].TargetGroupArn' --output text 2>/dev/null)
+          if [ "$TG_ARN" = "None" ] || [ -z "$TG_ARN" ]; then
+            TG_ARN=$(aws elbv2 create-target-group \
+              --name "${{ env.APP_NAME }}-tg" \
+              --protocol HTTP --port 8080 \
+              --vpc-id "$VPC_ID" \
+              --target-type ip \
+              --health-check-path /api/health \
+              --health-check-interval-seconds 30 \
+              --healthy-threshold-count 2 \
+              --unhealthy-threshold-count 3 \
+              --region ${{ env.AWS_REGION }} \
+              --query 'TargetGroups[0].TargetGroupArn' --output text)
+          fi
+          echo "TG_ARN=$TG_ARN" >> $GITHUB_OUTPUT
+
+          # Create or get ALB
+          ALB_ARN=$(aws elbv2 describe-load-balancers \
+            --names "${{ env.APP_NAME }}-alb" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'LoadBalancers[0].LoadBalancerArn' --output text 2>/dev/null)
+          if [ "$ALB_ARN" = "None" ] || [ -z "$ALB_ARN" ]; then
+            ALB_ARN=$(aws elbv2 create-load-balancer \
+              --name "${{ env.APP_NAME }}-alb" \
+              --subnets $(echo $SUBNETS | tr ',' ' ') \
+              --security-groups "$ALB_SG_ID" \
+              --scheme internet-facing \
+              --type application \
+              --region ${{ env.AWS_REGION }} \
+              --query 'LoadBalancers[0].LoadBalancerArn' --output text)
+            # Wait for ALB to be active
+            aws elbv2 wait load-balancer-available --load-balancer-arns "$ALB_ARN" --region ${{ env.AWS_REGION }}
+          fi
+          echo "ALB_ARN=$ALB_ARN" >> $GITHUB_OUTPUT
+
+          # Create listener if not exists
+          LISTENER_ARN=$(aws elbv2 describe-listeners \
+            --load-balancer-arn "$ALB_ARN" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Listeners[0].ListenerArn' --output text 2>/dev/null)
+          if [ "$LISTENER_ARN" = "None" ] || [ -z "$LISTENER_ARN" ]; then
+            aws elbv2 create-listener \
+              --load-balancer-arn "$ALB_ARN" \
+              --protocol HTTP --port 80 \
+              --default-actions Type=forward,TargetGroupArn="$TG_ARN" \
+              --region ${{ env.AWS_REGION }}
+          fi
+
+          # Output ALB DNS
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --load-balancer-arns "$ALB_ARN" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'LoadBalancers[0].DNSName' --output text)
+          echo "ALB_DNS=$ALB_DNS" >> $GITHUB_OUTPUT
+          echo "ALB URL: http://$ALB_DNS"
+
       - name: Register task definition
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
@@ -201,12 +298,42 @@ jobs:
 
       - name: Deploy ECS service
         run: |
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --region ${{ env.AWS_REGION }} \
+            --query 'Vpcs[0].VpcId' --output text)
+          SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --region ${{ env.AWS_REGION }} \
+            --query 'Subnets[*].SubnetId' --output text | tr '\t' ',')
+
+          # Get or create ECS task security group
+          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=${{ env.APP_NAME }}-sg" "Name=vpc-id,Values=$VPC_ID" \
+            --region ${{ env.AWS_REGION }} --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null)
+          if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+            SG_ID=$(aws ec2 create-security-group \
+              --group-name "${{ env.APP_NAME }}-sg" \
+              --description "Security group for ${{ env.APP_NAME }}" \
+              --vpc-id "$VPC_ID" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'GroupId' --output text)
+          fi
+
+          TG_ARN="${{ steps.alb.outputs.TG_ARN }}"
+
           # Check if service exists and is active
           SERVICE_STATUS=$(aws ecs describe-services --cluster ${{ env.APP_NAME }} --services ${{ env.APP_NAME }} \
             --region ${{ env.AWS_REGION }} --query 'services[0].status' --output text 2>/dev/null || echo "MISSING")
 
+          # Check if existing service already has the ALB attached
+          HAS_LB="false"
           if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
-            echo "Updating existing service..."
+            EXISTING_TG=$(aws ecs describe-services --cluster ${{ env.APP_NAME }} --services ${{ env.APP_NAME }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].loadBalancers[0].targetGroupArn' --output text 2>/dev/null || echo "None")
+            if [ "$EXISTING_TG" != "None" ] && [ -n "$EXISTING_TG" ]; then
+              HAS_LB="true"
+            fi
+          fi
+
+          if [ "$SERVICE_STATUS" = "ACTIVE" ] && [ "$HAS_LB" = "true" ]; then
+            echo "Updating existing service (ALB already attached)..."
             aws ecs update-service \
               --cluster ${{ env.APP_NAME }} \
               --service ${{ env.APP_NAME }} \
@@ -214,24 +341,26 @@ jobs:
               --force-new-deployment \
               --region ${{ env.AWS_REGION }}
           else
-            echo "Creating new service..."
-            VPC_ID=$(aws ec2 describe-vpcs --filters "Name=isDefault,Values=true" --region ${{ env.AWS_REGION }} \
-              --query 'Vpcs[0].VpcId' --output text)
-            SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --region ${{ env.AWS_REGION }} \
-              --query 'Subnets[*].SubnetId' --output text | tr '\t' ',')
-
-            # Create or get security group
-            SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=${{ env.APP_NAME }}-sg" "Name=vpc-id,Values=$VPC_ID" \
-              --region ${{ env.AWS_REGION }} --query 'SecurityGroups[0].GroupId' --output text 2>/dev/null)
-            if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
-              SG_ID=$(aws ec2 create-security-group \
-                --group-name "${{ env.APP_NAME }}-sg" \
-                --description "Security group for ${{ env.APP_NAME }}" \
-                --vpc-id "$VPC_ID" \
-                --region ${{ env.AWS_REGION }} \
-                --query 'GroupId' --output text)
+            # Need to (re)create service with ALB — can't add LB to existing service
+            if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+              echo "Recreating service to attach ALB..."
+              aws ecs update-service \
+                --cluster ${{ env.APP_NAME }} \
+                --service ${{ env.APP_NAME }} \
+                --desired-count 0 \
+                --region ${{ env.AWS_REGION }}
+              aws ecs wait services-stable \
+                --cluster ${{ env.APP_NAME }} \
+                --services ${{ env.APP_NAME }} \
+                --region ${{ env.AWS_REGION }} || true
+              aws ecs delete-service \
+                --cluster ${{ env.APP_NAME }} \
+                --service ${{ env.APP_NAME }} \
+                --region ${{ env.AWS_REGION }}
+              sleep 10
             fi
 
+            echo "Creating service with ALB..."
             aws ecs create-service \
               --cluster ${{ env.APP_NAME }} \
               --service-name ${{ env.APP_NAME }} \
@@ -239,6 +368,7 @@ jobs:
               --desired-count 1 \
               --launch-type FARGATE \
               --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG_ID],assignPublicIp=ENABLED}" \
+              --load-balancers "targetGroupArn=$TG_ARN,containerName=${{ env.APP_NAME }},containerPort=8080" \
               --region ${{ env.AWS_REGION }}
           fi
 
@@ -251,4 +381,7 @@ jobs:
             --region ${{ env.AWS_REGION }} || true
           echo "Deployment complete!"
           echo ""
-          echo "View logs: aws logs tail /ecs/${{ env.APP_NAME }} --follow --region ${{ env.AWS_REGION }}"
+          echo "ALB URL: http://${{ steps.alb.outputs.ALB_DNS }}"
+          echo "Upload:  curl -X POST http://${{ steps.alb.outputs.ALB_DNS }}/api/upload -F file=@yourfile.txt"
+          echo "Health:  http://${{ steps.alb.outputs.ALB_DNS }}/api/health"
+          echo "Logs:    aws logs tail /ecs/${{ env.APP_NAME }} --follow --region ${{ env.AWS_REGION }}"
